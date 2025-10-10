@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description"
+        content="InstantSfM: Fully Sparse and Parallel Structure-from-Motion">
+  <meta name="keywords" content="SfM, Bundle Adjustment, GPU, Sparse Optimization">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InstantSfM: Fully Sparse and Parallel Structure-from-Motion</title>
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PYVRSFMDRL"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-PYVRSFMDRL');
+  </script>
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+        rel="stylesheet">
+
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+  <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+  <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+  <link rel="icon" href="./static/images/favicon.svg">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="./static/js/bulma-carousel.min.js"></script>
+  <script src="./static/js/bulma-slider.min.js"></script>
+  <script src="./static/js/index.js"></script>
+
+  <!-- Babylon.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babylonjs/6.33.1/babylon.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babylonjs/6.33.1/babylonjs.loaders.min.js"></script>
+</head>
+<body>
+
+<nav class="navbar" role="navigation" aria-label="main navigation">
+  <div class="navbar-brand">
+    <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+    </a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-body">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered">
+        <div class="column has-text-centered">
+          <h1 class="title is-1 publication-title">InstantSfM: Fully Sparse and Parallel Structure-from-Motion</h1>
+          <div class="is-size-5 publication-authors">
+            <span class="author-block">
+              <a href="#">Jiankun Zhong</a><sup>1,3</sup><sup>*</sup>,</span>
+            <span class="author-block">
+              <a href="#">Zitong Zhan</a><sup>2</sup><sup>*</sup>,</span>
+            <span class="author-block">
+              <a href="#">Quankai Gao</a><sup>1</sup><sup>*</sup>,</span>
+            <span class="author-block">
+              <a href="#">Ziyu Chen</a><sup>1</sup>,</span>
+            <span class="author-block">
+              <a href="#">Haozhe Lou</a><sup>1</sup>,</span>
+            <span class="author-block">
+              <a href="#">Jiageng Mao</a><sup>1</sup>,</span>
+            <span class="author-block">
+              <a href="#">Ulrich Neumann</a><sup>1</sup>,</span>
+            <span class="author-block">
+              <a href="#">Yue Wang</a><sup>1</sup>
+            </span>
+          </div>
+
+          <div class="is-size-5 publication-authors">
+            <span class="author-block"><sup>1</sup>University of Southern California,</span>
+            <span class="author-block"><sup>2</sup>University at Buffalo,</span>
+            <span class="author-block"><sup>3</sup>Tsinghua University,</span>
+          </div>
+          <div class="is-size-6 has-text-grey">
+            <span class="author-block"><sup>*</sup> Equal Contribution</span>
+          </div>
+
+          <div class="column has-text-centered">
+            <div class="publication-links">
+              <!-- PDF Link. -->
+              <span class="link-block">
+                <a href="./static/papers/instantsfm.pdf"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fas fa-file-pdf"></i>
+                  </span>
+                  <span>Paper</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="#"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="ai ai-arxiv"></i>
+                  </span>
+                  <span>arXiv</span>
+                </a>
+              </span>
+              <!-- Code Link. -->
+              <span class="link-block">
+                <a href="https://github.com/cre185/InstantSfM"
+                   class="external-link button is-normal is-rounded is-dark">
+                  <span class="icon">
+                      <i class="fab fa-github"></i>
+                  </span>
+                  <span>Code</span>
+                  </a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="hero teaser">
+  <div class="container is-max-desktop">
+    <div class="hero-body">
+      <div class="content has-text-justified">
+        <p>
+          <b>TLDR: <span style="color: #3273dc;">InstantSfM</span></b> is a fully sparse and parallel Structure-from-Motion pipeline that leverages GPU acceleration to achieve up to 40× speedup over traditional methods like COLMAP while maintaining or improving reconstruction accuracy across diverse datasets.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="hero is-light is-small">
+  <div class="hero-body">
+    <div class="container">
+      <div id="results-carousel" class="carousel results-carousel">
+        <div class="item item-bicycle">
+          <video poster="" id="bicycle" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/bicycle.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-bonsai">
+          <video poster="" id="bonsai" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/bonsai.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-counter">
+          <video poster="" id="counter" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/counter.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-garden">
+          <video poster="" id="garden" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/garden.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-kitchen">
+          <video poster="" id="kitchen" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/kitchen.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-room">
+          <video poster="" id="room" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/room.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+        <div class="item item-stump">
+          <video poster="" id="stump" autoplay controls muted loop playsinline height="100%">
+            <source src="./static/videos/stump.mp4"
+                    type="video/mp4">
+          </video>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <!-- Abstract. -->
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Abstract 📄</h2>
+        <div class="content has-text-justified">
+          <p>
+            Structure-from-Motion (SfM), a method that recovers camera poses and scene geometry from uncalibrated images, 
+            is a central component in robotic reconstruction and simulation. Despite the state-of-the-art performance of 
+            traditional SfM methods such as COLMAP and its follow-up work, GLOMAP, naïve CPU-specialized implementations 
+            of bundle adjustment (BA) or global positioning (GP) introduce significant computational overhead when handling 
+            large-scale scenarios.
+          </p>
+          <p>
+            In this paper, we unleash the full potential of GPU parallel computation to accelerate each critical stage 
+            of the standard SfM pipeline. Building upon recent advances in sparse-aware bundle adjustment optimization, 
+            our design extends these techniques to accelerate both BA and GP within a unified global SfM framework.
+          </p>
+          <p>
+            Through extensive experiments on datasets of varying scales (e.g. 5000 images where VGGSfM and VGGT run out 
+            of memory), our method demonstrates up to  <span style="color:#3273dc;"><b>∼40×</b></span> speedup over COLMAP while achieving consistently comparable 
+            or even improved reconstruction accuracy.
+          </p>
+        </div>
+      </div>
+    </div>
+    <!--/ Abstract. -->
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <!-- Method Overview. -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Method Overview 🛠️</h2>
+        <div class="content has-text-justified">
+          <p>
+            InstantSfM introduces a comprehensive PyTorch-based SfM pipeline that leverages GPU acceleration 
+            for both Bundle Adjustment and Global Positioning optimization stages.
+          </p>
+        </div>
+        
+        <div class="columns is-vcentered">
+          <div class="column">
+            <img src="./static/images/sparse_jacobian.png" alt="Sparse Jacobian Structure">
+          </div>
+          <div class="column">
+            <h3 class="title is-4">Sparse-Aware Optimization 🧠</h3>
+            <p>
+              The key insight is that the Jacobian matrix in SfM optimization is highly sparse. 
+              We implement efficient sparse matrix operations using cuSPARSE to dramatically 
+              reduce both memory usage and computational cost.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!--/ Method Overview. -->
+
+    <!-- Performance Comparison -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Performance Comparison ⚡</h2>
+        
+        <div class="columns is-vcentered">
+          <div class="column">
+            <img src="./static/images/runtime_comparison.png" alt="Runtime Comparison">
+          </div>
+          <div class="column">
+            <h3 class="title is-4">Scalability 📊</h3>
+            <p>
+              InstantSfM demonstrates superior scalability compared to COLMAP and GLOMAP, 
+              with speedups becoming more pronounced as the number of images increases. 
+              Our method can handle thousands of images efficiently on a single GPU.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!--/ Performance Comparison -->
+
+    <!-- Key Features -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Key Features 🌟</h2>
+        
+        <div class="column">
+          <div class="content">
+            <h3 class="title is-4">⚡ GPU Acceleration</h3>
+            <p>
+              Complete SfM pipeline implemented in PyTorch with CUDA acceleration, 
+              enabling efficient parallel processing of large-scale datasets.
+            </p>
+          </div>
+          
+          <div class="content">
+            <h3 class="title is-4">🧠 Depth Prior Integration</h3>
+            <p>
+              Support for incorporating ground truth depth priors to achieve metric-scale 
+              reconstruction, crucial for robotics applications.
+            </p>
+          </div>
+          
+          <div class="content">
+            <h3 class="title is-4">🔗 Easy Integration</h3>
+            <p>
+              User-friendly PyTorch implementation that enables seamless integration 
+              with other machine learning frameworks and custom optimization routines.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!--/ Key Features -->
+
+  </div>
+</section>
+
+<section class="section">
+  <div class="container is-max-desktop">
+    <!-- Interactive Point Cloud Viewer -->
+    <div class="columns is-centered">
+      <div class="column is-full-width">
+        <h2 class="title is-3">Interactive 3D Reconstruction 🖱️🧩</h2>
+        <div class="content has-text-justified">
+          <p>
+            Explore the 3D reconstructions generated by InstantSfM. Click and drag to rotate, scroll to zoom, 
+            and use the dropdown to switch between different scenes.
+          </p>
+        </div>
+        
+        <div class="field">
+          <div class="control">
+            <div class="select">
+              <select id="sceneSelector">
+                <option value="bicycle">Bicycle</option>
+                <option value="bonsai">Bonsai</option>
+                <option value="counter">Counter</option>
+                <option value="garden">Garden</option>
+                <option value="kitchen">Kitchen</option>
+                <option value="room">Room</option>
+                <option value="stump">Stump</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div id="babylonCanvas" style="width: 100%; height: 600px; border: 1px solid #ccc; margin: 20px 0;">
+          <canvas id="renderCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+        </div>
+        
+        <div class="content">
+          <p class="has-text-grey">
+            <small>
+              Use mouse to rotate (left click + drag), pan (right click + drag), and zoom (scroll wheel). 
+              Point clouds are colored by RGB values extracted during reconstruction.
+            </small>
+          </p>
+        </div>
+      </div>
+    </div>
+    <!--/ Interactive Point Cloud Viewer -->
+  </div>
+  <div class="container is-max-desktop" style="margin-top:2em;">
+    <h2 class="title is-3">Presentation Video 🎬</h2>
+    <div class="video-container" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;">
+      <iframe src="https://youtu.be/v-ewKEPTEDg"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+              style="position: absolute; top:0; left:0; width:100%; height:100%;">
+      </iframe>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="BibTeX">
+  <div class="container is-max-desktop content">
+    <h2 class="title">BibTeX</h2>
+    <pre><code>@article{zhong2025instantsfm,
+  title={InstantSfM: Fully Sparse and Parallel Structure-from-Motion},
+  author={Zhong, Jiankun and Zhan, Zitong and Gao, Quankai and Chen, Ziyu and Lou, Haozhe and Mao, Jiageng and Neumann, Ulrich and Wang, Yue},
+  journal={arXiv preprint},
+  year={2025}
+}</code></pre>
+  </div>
+</section>
+
+<script>
+class SfMViewer {
+  constructor() {
+    this.engine = null;
+    this.scene = null;
+    this.camera = null;
+    this.pointCloudMesh = null;
+    this.cameraFrustums = [];
+    this.currentScene = 'bicycle';
+    
+    this.init();
+    this.setupEventListeners();
+  }
+  
+  init() {
+    const canvas = document.getElementById('renderCanvas');
+    this.engine = new BABYLON.Engine(canvas, true);
+    this.scene = new BABYLON.Scene(this.engine);
+    
+    // Setup camera
+    this.camera = new BABYLON.ArcRotateCamera(
+      'camera', 
+      -Math.PI / 2, 
+      Math.PI / 2, 
+      10, 
+      new BABYLON.Vector3(0, 0, 0), 
+      this.scene
+    );
+    this.camera.attachControl(canvas, true);
+
+    this.camera.wheelPrecision = 50;
+    this.camera.lowerRadiusLimit = 0.5;
+    this.camera.upperRadiusLimit = 100;
+
+    // Prevent default scroll behavior on canvas
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+    }, { passive: false });
+    
+    // Setup lighting
+    const light = new BABYLON.HemisphericLight('light', new BABYLON.Vector3(0, 1, 0), this.scene);
+    light.intensity = 0.7;
+    
+    // Load initial scene
+    this.loadScene(this.currentScene);
+    
+    // Render loop
+    this.engine.runRenderLoop(() => {
+      this.scene.render();
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', () => {
+      this.engine.resize();
+    });
+  }
+  
+  async loadScene(sceneName) {
+    try {
+      // Clear existing objects
+      this.clearScene();
+      
+      // Load point cloud and cameras data
+      await Promise.all([
+        this.loadPointCloud(sceneName),
+        this.loadCameras(sceneName)
+      ]);
+      
+      // Auto-fit the view
+      this.autoFitCamera();
+    } catch (error) {
+      console.error('Error loading scene:', error);
+    }
+  }
+  
+  async loadPointCloud(sceneName) {
+    const response = await fetch(`./static/reconstructions/${sceneName}/points3D.txt`);
+    if (!response.ok) {
+      throw new Error(`Failed to load points3D.txt for ${sceneName}`);
+    }
+    
+    const text = await response.text();
+    const points = this.parsePoints3D(text);
+    console.log(`Loaded ${points.length} points for scene ${sceneName}`);
+    
+    if (points.length > 0) {
+      await this.createPointCloudFromData(points);
+    }
+
+  }
+  
+  async loadCameras(sceneName) {
+    const response = await fetch(`./static/reconstructions/${sceneName}/images.txt`);
+    if (!response.ok) {
+      throw new Error(`Failed to load images.txt for ${sceneName}`);
+    }
+    
+    const text = await response.text();
+    const cameras = this.parseCameras(text);
+    console.log(`Loaded ${cameras.length} cameras for scene ${sceneName}`);
+    
+    if (cameras.length > 0) {
+      this.createCameraFrustums(cameras);
+    }
+  }
+  
+  parsePoints3D(text) {
+    const lines = text.split('\n');
+    const points = [];
+    
+    for (const line of lines) {
+      if (line.startsWith('#') || line.trim() === '') continue;
+      
+      const parts = line.trim().split(/\s+/);
+      if (parts.length >= 7) {
+        // COLMAP format: POINT3D_ID X Y Z R G B ERROR TRACK[] as (IMAGE_ID, POINT2D_IDX)
+        const point = {
+          id: parseInt(parts[0]),
+          x: parseFloat(parts[1]),
+          y: parseFloat(parts[2]), 
+          z: parseFloat(parts[3]),
+          r: parseInt(parts[4]),
+          g: parseInt(parts[5]),
+          b: parseInt(parts[6])
+        };
+        points.push(point);
+      }
+    }
+    
+    return points;
+  }
+  
+  parseCameras(text) {
+    const lines = text.split('\n');
+    const cameras = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.startsWith('#') || line.trim() === '') continue;
+      
+      const parts = line.trim().split(/\s+/);
+      if (parts.length >= 10) {
+        // COLMAP format: IMAGE_ID QW QX QY QZ TX TY TZ CAMERA_ID NAME
+        const camera = {
+          id: parseInt(parts[0]),
+          qw: parseFloat(parts[1]),
+          qx: parseFloat(parts[2]),
+          qy: parseFloat(parts[3]),
+          qz: parseFloat(parts[4]),
+          tx: parseFloat(parts[5]),
+          ty: parseFloat(parts[6]),
+          tz: parseFloat(parts[7]),
+          camera_id: parseInt(parts[8]),
+          name: parts[9] || `camera_${parts[0]}`
+        };
+        cameras.push(camera);
+        i++;
+      }
+    }
+    
+    return cameras;
+  }
+  
+  async createPointCloudFromData(points) {
+    const positions = [];
+    const colors = [];
+    
+    for (const point of points) {
+      positions.push(point.x, -point.y, point.z); // Invert Y for right-handed system
+      colors.push(point.r / 255, point.g / 255, point.b / 255, 1.0);
+    }
+    
+    // Create point cloud using PointsCloudSystem
+    const pointCloud = new BABYLON.PointsCloudSystem('pointcloud', 2, this.scene);
+    pointCloud.addPoints(points.length);
+    this.pointCloudMesh = await pointCloud.buildMeshAsync();
+    
+    for (let p = 0; p < pointCloud.nbParticles; p++) {
+      const particle = pointCloud.particles[p];
+      particle.position.x = positions[p * 3];
+      particle.position.y = positions[p * 3 + 1];
+      particle.position.z = positions[p * 3 + 2];
+      particle.color = new BABYLON.Color4(
+        colors[p * 4],
+        colors[p * 4 + 1],
+        colors[p * 4 + 2],
+        colors[p * 4 + 3]
+      );
+    }
+
+    pointCloud.setParticles();
+  }
+  
+  createCameraFrustums(cameras) {
+    const frustumScale = 0.2;
+    const redMaterial = new BABYLON.StandardMaterial('redCamMat', this.scene);
+    redMaterial.diffuseColor = new BABYLON.Color3(0.8, 0.1, 0.1);
+    redMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+    redMaterial.emissiveColor = new BABYLON.Color3(0.2, 0, 0);
+
+    cameras.forEach((cam, index) => {
+      const q_wc = new BABYLON.Quaternion(cam.qx, cam.qy, cam.qz, cam.qw);
+      const rotMatrix = new BABYLON.Matrix();
+      q_wc.toRotationMatrix(rotMatrix);
+
+      const q_cw = q_wc.conjugate();
+      let rotMat_cw = new BABYLON.Matrix();
+      q_cw.toRotationMatrix(rotMat_cw);
+
+      // S*R*S
+      let S = BABYLON.Matrix.Identity();
+      S.setRow(1, new BABYLON.Vector4(0, -1, 0, 0));
+      let rotMat_cw_flipped = S.multiply(rotMat_cw).multiply(S);
+      let q_cw_flipped = BABYLON.Quaternion.FromRotationMatrix(rotMat_cw_flipped);
+
+      const t_wc = new BABYLON.Vector3(cam.tx, cam.ty, cam.tz);
+
+      const rotMatrixT = rotMatrix.transpose();
+      const t_cw = BABYLON.Vector3.TransformCoordinates(t_wc.negate(), rotMatrixT);
+      t_cw.y = -t_cw.y; // Invert Y for right-handed system
+
+      const frustum = this.createFrustumMesh(`camera_${cam.id}`, frustumScale);
+      frustum.position = t_cw;
+      frustum.rotationQuaternion = q_cw_flipped;
+
+      frustum.material = redMaterial;
+      this.cameraFrustums.push(frustum);
+    });
+  }
+  
+  createFrustumMesh(name, scale) {
+    // Create a pyramid-like frustum to represent camera
+    const positions = [
+      0, 0, 0,
+      -scale*0.4, -scale*0.3, scale,
+      scale*0.4, -scale*0.3, scale,
+      scale*0.4, scale*0.3, scale,
+      -scale*0.4, scale*0.3, scale
+    ];
+    
+    const indices = [
+      0, 1, 2,
+      0, 2, 3,
+      0, 3, 4,
+      0, 4, 1,
+      1, 3, 2,
+      1, 4, 3
+    ];
+
+    const frustum = new BABYLON.Mesh(name, this.scene);
+    const vertexData = new BABYLON.VertexData();
+    
+    vertexData.positions = positions;
+    vertexData.indices = indices;
+
+    vertexData.applyToMesh(frustum);
+
+    const lines = [];
+    lines.push([new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(-scale*0.4, -scale*0.3, scale)]);
+    lines.push([new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(scale*0.4, -scale*0.3, scale)]);
+    lines.push([new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(scale*0.4, scale*0.3, scale)]);
+    lines.push([new BABYLON.Vector3(0, 0, 0), new BABYLON.Vector3(-scale*0.4, scale*0.3, scale)]);
+    lines.push([new BABYLON.Vector3(-scale*0.4, -scale*0.3, scale), new BABYLON.Vector3(scale*0.4, -scale*0.3, scale)]);
+    lines.push([new BABYLON.Vector3(scale*0.4, -scale*0.3, scale), new BABYLON.Vector3(scale*0.4, scale*0.3, scale)]);
+    lines.push([new BABYLON.Vector3(scale*0.4, scale*0.3, scale), new BABYLON.Vector3(-scale*0.4, scale*0.3, scale)]);
+    lines.push([new BABYLON.Vector3(-scale*0.4, scale*0.3, scale), new BABYLON.Vector3(-scale*0.4, -scale*0.3, scale)]);
+    
+    const lineSystem = BABYLON.MeshBuilder.CreateLineSystem('lines_' + name, {lines: lines}, this.scene);
+    lineSystem.color = new BABYLON.Color3(0.5, 0, 0);
+    lineSystem.parent = frustum;
+    
+    return frustum;
+  }
+  
+  quaternionToRotationMatrix(w, x, y, z) {
+    // Convert quaternion to 3x3 rotation matrix (for reference, not directly used in Babylon)
+    return [
+      [1-2*(y*y + z*z), 2*(x*y - w*z), 2*(x*z + w*y)],
+      [2*(x*y + w*z), 1-2*(x*x + z*z), 2*(y*z - w*x)],
+      [2*(x*z - w*y), 2*(y*z + w*x), 1-2*(x*x + y*y)]
+    ];
+  }
+  
+  clearScene() {
+    // Remove existing point cloud
+    if (this.pointCloudMesh) {
+      this.pointCloudMesh.dispose();
+      this.pointCloudMesh = null;
+    }
+    
+    // Remove existing camera frustums
+    this.cameraFrustums.forEach(frustum => {
+      frustum.dispose();
+    });
+    this.cameraFrustums = [];
+  }
+  
+  autoFitCamera() {
+    // Calculate bounding box of all objects in scene
+    let minX = Infinity, minY = Infinity, minZ = Infinity;
+    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+    
+    // Include point cloud bounds
+    if (this.pointCloudMesh) {
+      const boundingBox = this.pointCloudMesh.getBoundingInfo().boundingBox;
+      const min = boundingBox.minimum;
+      const max = boundingBox.maximum;
+      minX = Math.min(minX, min.x); maxX = Math.max(maxX, max.x);
+      minY = Math.min(minY, min.y); maxY = Math.max(maxY, max.y);
+      minZ = Math.min(minZ, min.z); maxZ = Math.max(maxZ, max.z);
+    }
+    
+    // Include camera positions
+    this.cameraFrustums.forEach(frustum => {
+      const pos = frustum.position;
+      minX = Math.min(minX, pos.x); maxX = Math.max(maxX, pos.x);
+      minY = Math.min(minY, pos.y); maxY = Math.max(maxY, pos.y);
+      minZ = Math.min(minZ, pos.z); maxZ = Math.max(maxZ, pos.z);
+    });
+    
+    if (minX !== Infinity) {
+      const center = new BABYLON.Vector3((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2);
+      const size = Math.max(maxX - minX, maxY - minY, maxZ - minZ);
+      
+      this.camera.setTarget(center);
+      this.camera.radius = size * 2;
+    }
+  }
+  
+  setupEventListeners() {
+    const selector = document.getElementById('sceneSelector');
+    selector.addEventListener('change', (event) => {
+      this.currentScene = event.target.value;
+      this.loadScene(this.currentScene);
+    });
+  }
+}
+
+// Initialize the SfM viewer when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+  new SfMViewer();
+});
+</script>
+
+<footer class="footer">
+  <div class="container">
+    <div class="content has-text-centered">
+      <a class="icon-link"
+         href="./static/papers/instantsfm.pdf">
+        <i class="fas fa-file-pdf"></i>
+      </a>
+      <a class="icon-link" href="https://github.com/cre185/InstantSfM" class="external-link">
+        <i class="fab fa-github"></i>
+      </a>
+    </div>
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content">
+          <p>
+            Website template modified from <a href="https://nerfies.github.io/">NeRFies</a>.
+          </p>
+          <p>
+            This website is licensed under a <a rel="license"
+                                                href="http://creativecommons.org/licenses/by-sa/4.0/">Creative
+            Commons Attribution-ShareAlike 4.0 International License</a>.
+          </p>
+          <p>
+            This means you are free to borrow and modify the <a
+              href="https://github.com/nerfies/nerfies.github.io">source
+              code</a> of this website as long as
+            you link back to the <a href="https://nerfies.github.io/">NeRFies</a> page in the footer.
+            Please remember to remove the analytics code included in the header of the website which
+            you do not want on your website.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
