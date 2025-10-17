@@ -64,6 +64,10 @@ Then you can install instantsfm locally by running:
 ```bash
 pip install -e .
 ```
+Install PyPose from the bae branch:
+```bash
+pip install git+https://github.com/pypose/pypose.git@bae
+```
 Install bae by running:
 ```bash
 pip install git+ssh://git@github.com/zitongzhan/bae.git
@@ -128,4 +132,5 @@ Want to apply several modifications to config files while keeping the original o
 
 
 **Acknowledgments**: We thank the following great works [COLMAP](https://github.com/colmap/colmap), [GLOMAP](https://github.com/colmap/glomap), [VGGT](https://github.com/facebookresearch/vggt), [VGGSfM](https://github.com/facebookresearch/vggsfm) for their code. We would like to thank Linfei Pan for the help.
+
 
