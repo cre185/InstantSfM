@@ -46,7 +46,7 @@ Create a conda environment:
 conda create -n instantsfm python=3.12
 conda activate instantsfm
 ```
-Install PyTorch dependencies, use the following command to install the recommended version of PyTorch, or choose your own version according to your CUDA version:  
+Install PyTorch dependencies, use the following command to install the recommended version of PyTorch (2.3.1 with CUDA 12.1), or choose your own version according to your CUDA version:  
 ```bash
 pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
 ```
@@ -82,7 +82,11 @@ If opencv-python fail to load xcb, you can install opencv-python-headless
 pip install opencv-python-headless
 ```
 
-By default feature extraction is done via COLMAP, which requires you to install COLMAP first. You can follow the instructions [here](https://colmap.github.io/install.html) to install COLMAP. Make sure the `colmap` command is available in your terminal.  
+By default feature extraction is done via COLMAP, which requires you to install COLMAP first. You can follow the instructions [here](https://colmap.github.io/install.html) or install through [conda](https://anaconda.org/conda-forge/colmap):
+```bash
+conda install conda-forge::colmap
+```
+Make sure the `colmap` command is available in your terminal.  
 
 ## 2. Demo  
 To run the demo, simply try the command `python demo.py`. In the demo, you can choose to reconstruct either from user-provided images or from a image directory. A valid input image directory should follow the structure shown below:  
@@ -122,4 +126,6 @@ For a more detailed usage, you can run the command with `--help` to see all avai
 While the default configuration should work for most cases, you can also try to modify the configuration in the `config/` folder to improve the performance on your own dataset.  
 Want to apply several modifications to config files while keeping the original ones? Add the `--manual_config_name` argument and specify the name of your own config file. For example, if you created a new config file `config/my_config.py`, add `--manual_config_name my_config` to the command line. Please make sure the config file is a valid one, the recommended way is to copy an original config file and modify it.  
 
+
 **Acknowledgments**: We thank the following great works: [BAE](https://arxiv.org/abs/2409.12190), [COLMAP](https://github.com/colmap/colmap), [GLOMAP](https://github.com/colmap/glomap), [VGGT](https://github.com/facebookresearch/vggt), [VGGSfM](https://github.com/facebookresearch/vggsfm). And we would like Linfei Pan for the help.
+

@@ -8,12 +8,12 @@ from instantsfm.controllers.feature_handler import GenerateDatabase
 def run_feature_handler():
     handler_types = ['colmap', 'dedode', 'disk+lightglue', 'superpoint+lightglue', 'sift']
     parser = ArgumentParser()
-    parser.add_argument('--data', required=True, help='Path to the data folder')
+    parser.add_argument('--data_path', required=True, help='Path to the data folder')
     parser.add_argument('--manual_config_name', help='Name of the manual configuration file')
     parser.add_argument('--feature_handler', choices=handler_types, default='colmap', help='Feature handling method to use')
     handler_args = parser.parse_args()
 
-    path_info = ReadData(handler_args.data)
+    path_info = ReadData(handler_args.data_path)
     if not path_info:
         print('Invalid data path, please check the provided path')
         return
@@ -31,4 +31,5 @@ def entrypoint():
     run_feature_handler()
     
 if __name__ == '__main__':
+
     entrypoint()
