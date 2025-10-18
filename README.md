@@ -31,7 +31,7 @@
 <div align="center">
 
 </div>
-InstantSfM is a novel global SfM system completed in CUDA/Triton and PyTorch. 
+
 
 
 ## 1. Installation  
