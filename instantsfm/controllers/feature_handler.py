@@ -7,7 +7,7 @@ import concurrent.futures
 from instantsfm.utils import database
 from instantsfm.scene.defs import Ids2PairId, PairId2Ids
 
-def GenerateDatabase(image_path, database_path, feature_handler_name, config, single_camera=False):
+def GenerateDatabase(image_path, database_path, feature_handler_name, config, single_camera=False, camera_per_folder=False):
     # colmap support from command line. ensure colmap is installed
     if feature_handler_name == 'colmap':
         import subprocess
@@ -16,7 +16,8 @@ def GenerateDatabase(image_path, database_path, feature_handler_name, config, si
             '--image_path', image_path,
             '--database_path', database_path,
             '--ImageReader.camera_model', 'SIMPLE_RADIAL',
-            '--ImageReader.single_camera', '1' if single_camera else '0'
+            '--ImageReader.single_camera', '1' if single_camera else '0',
+            '--ImageReader.single_camera_per_folder', '1' if (not single_camera and camera_per_folder) else '0'
         ]
         exhaustive_matcher_cmd = [
             'colmap', 'exhaustive_matcher',
@@ -30,6 +31,7 @@ def GenerateDatabase(image_path, database_path, feature_handler_name, config, si
         matcher_cmd = exhaustive_matcher_cmd if use_exhaustive else sequential_matcher_cmd
 
         try:
+            print(f"Feature extraction started for {image_path} by {feature_extractor_cmd}")
             subprocess.run(feature_extractor_cmd, check=True)
             print(f"Feature extraction completed for {image_path}")
         except subprocess.CalledProcessError as e:
