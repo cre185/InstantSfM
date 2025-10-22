@@ -64,10 +64,6 @@ Then you can install instantsfm locally by running:
 ```bash
 pip install -e .
 ```
-Install PyPose from the bae branch:
-```bash
-pip install git+https://github.com/pypose/pypose.git@bae
-```
 Install bae by running:
 ```bash
 pip install git+ssh://git@github.com/zitongzhan/bae.git
