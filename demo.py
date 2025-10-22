@@ -94,7 +94,7 @@ def create_3d_visualization(sfm_data: dict) -> go.Figure:
         z=points_xyz[:, 2],
         mode='markers',
         marker=dict(
-            size=1,
+            size=0.5,
             color=rgb_colors,
             opacity=0.8
         ),
@@ -129,12 +129,14 @@ def create_3d_visualization(sfm_data: dict) -> go.Figure:
         # Calculate image plane corners in camera space
         half_width = (sensor_width / 2) / focal_length
         half_height = (sensor_height / 2) / focal_length
+        # scale down the frustum to a fixed smaller size for better visualization
+        FRUSTUM_SCALE = 0.4
         corners_camera_space = np.array([
             [-half_width, -half_height, 1],
             [half_width, -half_height, 1],
             [half_width, half_height, 1],
             [-half_width, half_height, 1]
-        ])
+        ]) * FRUSTUM_SCALE
 
         # Transform corners to world space
         corners_world_space = (R.T @ corners_camera_space.T).T + camera_position
@@ -157,7 +159,7 @@ def create_3d_visualization(sfm_data: dict) -> go.Figure:
                 y=[edge[0][1], edge[1][1]],
                 z=[edge[0][2], edge[1][2]],
                 mode='lines',
-                line=dict(color='red', width=2),
+                line=dict(color='red', width=0.5),
                 name=None
             ))
     
@@ -254,7 +256,8 @@ with gr.Blocks(title="InstantSfM") as demo:
             # from folder
             input_dir = gr.Textbox(
                 label="Input folder path",
-                placeholder="select path below",
+                placeholder="input path here",
+                type="text",
             )
             
             submit_btn_folder = gr.Button("Start Reconstruction from Folder", variant="primary")
@@ -269,7 +272,7 @@ with gr.Blocks(title="InstantSfM") as demo:
                 z=points[:, 2],
                 mode='markers',
                 marker=dict(
-                    size=2,
+                    size=0.5,
                     color='white',
                     opacity=0.8
                 ),

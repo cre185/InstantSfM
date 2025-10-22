@@ -34,7 +34,9 @@ dependencies = [
     "plotly",
     "splines",
     "jaxtyping",
+    "triton",
     "gsplat",
+    "pypose @ git+https://github.com/pypose/pypose.git@bae",
     "fused-ssim @ git+https://github.com/rahul-goel/fused-ssim",
 ]
 
