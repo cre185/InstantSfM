@@ -27,5 +27,4 @@ def entrypoint():
     run_gaussian_splatting()
 
 if __name__ == '__main__':
-
     entrypoint()

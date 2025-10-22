@@ -7,7 +7,7 @@ import concurrent.futures
 from instantsfm.utils import database
 from instantsfm.scene.defs import Ids2PairId, PairId2Ids
 
-def GenerateDatabase(image_path, database_path, feature_handler_name, config):
+def GenerateDatabase(image_path, database_path, feature_handler_name, config, single_camera=False):
     # colmap support from command line. ensure colmap is installed
     if feature_handler_name == 'colmap':
         import subprocess
@@ -15,8 +15,8 @@ def GenerateDatabase(image_path, database_path, feature_handler_name, config):
             'colmap', 'feature_extractor',
             '--image_path', image_path,
             '--database_path', database_path,
-            '--ImageReader.camera_model', 'SIMPLE_RADIAL'
-            # '--ImageReader.single_camera', '1' if config.OPTIONS['uniform_camera'] else '0'
+            '--ImageReader.camera_model', 'SIMPLE_RADIAL',
+            '--ImageReader.single_camera', '1' if single_camera else '0'
         ]
         exhaustive_matcher_cmd = [
             'colmap', 'exhaustive_matcher',
@@ -24,7 +24,7 @@ def GenerateDatabase(image_path, database_path, feature_handler_name, config):
         ]
         sequential_matcher_cmd = [
             'colmap', 'sequential_matcher',
-            '--database_path', database_path,
+            '--database_path', database_path
         ]
         use_exhaustive = True
         matcher_cmd = exhaustive_matcher_cmd if use_exhaustive else sequential_matcher_cmd
