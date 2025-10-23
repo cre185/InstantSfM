@@ -28,8 +28,8 @@ class TrackEngine:
             for idx in pair.inliers:
                 point1, point2 = matches[idx]
 
-                point_global_id1 = (pair.image_id1 << 32) | point1
-                point_global_id2 = (pair.image_id2 << 32) | point2
+                point_global_id1 = (pair.image_id1 << 16) | point1
+                point_global_id2 = (pair.image_id2 << 16) | point2
                 
                 if point_global_id2 < point_global_id1:
                     self.uf.Union(point_global_id1, point_global_id2)
@@ -44,7 +44,7 @@ class TrackEngine:
             for idx in pair.inliers:
                 point1, point2 = pair.matches[idx]
 
-                point_global_id1 = (pair.image_id1 << 32) | point1
+                point_global_id1 = (pair.image_id1 << 16) | point1
                 
                 track_id = self.uf.Find(point_global_id1)
 
