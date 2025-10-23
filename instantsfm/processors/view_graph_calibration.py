@@ -71,8 +71,8 @@ def SolveViewGraphCalibration(view_graph:ViewGraph, cameras, images, VIEW_GRAPH_
 
     # manually calculate the residuals
     for idx, (pair_id, image_pair) in enumerate(valid_image_pairs.items()):
-        residual = residuals[2 * idx:2 * idx + 2]
         cost_function.Evaluate([cam1.focal_length, cam2.focal_length], residuals, None)
+        residual = residuals[2 * idx:2 * idx + 2]
         if residual[0]**2 + residual[1]**2 > thres_two_view_error_sq:
             invalid_counter += 1
             image_pair.is_valid = False
