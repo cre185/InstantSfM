@@ -14,7 +14,7 @@ def run_sfm():
     parser.add_argument('--record_recon', action='store_true', help='Save reconstruction data at each step')
     parser.add_argument('--record_path', default=None, help='Path to save the recorded reconstruction data')
     parser.add_argument('--disable_depths', action='store_true', help='Disable the use of depths if available')
-    parser.add_argument('--export_txt', action='store_true', help='Export the reconstruction in binary format')
+    parser.add_argument('--export_txt', action='store_true', help='Export the reconstruction in plain text format')
     parser.add_argument('--manual_config_name', help='Name of the manual configuration file')
     mapper_args = parser.parse_args()
 
@@ -58,3 +58,4 @@ def entrypoint():
     
 if __name__ == '__main__':
     entrypoint()
+
