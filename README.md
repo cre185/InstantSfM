@@ -46,7 +46,7 @@ Create a conda environment:
 conda create -n instantsfm python=3.12
 conda activate instantsfm
 ```
-Install PyTorch dependencies, use the following command to install the recommended version of PyTorch (2.3.1 with CUDA 12.1), or choose your own version according to your CUDA version:  
+Install PyTorch dependencies, use the following command to install the recommended version of PyTorch (2.3.1 with CUDA 12.1), or choose your own version according to your CUDA version [here](https://pytorch.org/get-started/previous-versions/):  
 ```bash
 pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
 ```
@@ -149,6 +149,7 @@ and
   url = {https://arxiv.org/abs/2409.12190}
 }
 ```
+
 
 
 
