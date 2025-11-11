@@ -127,14 +127,14 @@ While the default configuration should work for most cases, you can also try to 
 Want to apply several modifications to config files while keeping the original ones? Add the `--manual_config_name` argument and specify the name of your own config file. For example, if you created a new config file `config/my_config.py`, add `--manual_config_name my_config` to the command line. Please make sure the config file is a valid one, the recommended way is to copy an original config file and modify it.  
 
 
-**Acknowledgments**: We thank the following great works: [BAE](https://github.com/zitongzhan/bae), [Pypose](https://github.com/pypose/pypose), [COLMAP](https://github.com/colmap/colmap), [GLOMAP](https://github.com/colmap/glomap), [VGGT](https://github.com/facebookresearch/vggt), [VGGSfM](https://github.com/facebookresearch/vggsfm). And we would like Linfei Pan for the help.
+**Acknowledgments**: We thank the following great works: [BAE](https://github.com/zitongzhan/bae), [Pypose](https://github.com/pypose/pypose), [COLMAP](https://github.com/colmap/colmap), [GLOMAP](https://github.com/colmap/glomap), [VGGT](https://github.com/facebookresearch/vggt), [VGGSfM](https://github.com/facebookresearch/vggsfm). We would like to thank Linfei Pan for the help.
 
 ## Citation
 If you find our code or paper useful, please consider citing:
 ```
 @article{zhong2025instantsfm,
   title = {InstantSfM: Fully Sparse and Parallel Structure-from-Motion},
-  author = {Jiankun Zhong, Zitong Zhan, Quankai Gao, Ziyu Chen, Haozhe Lou, Jiageng Mao, Ulrich Neumann, Yue Wang},
+  author={Jiankun Zhong and Zitong Zhan and Quankai Gao and Ziyu Chen and Haozhe Lou and Jiageng Mao and Ulrich Neumann and Yue Wang},
   journal = {arXiv preprint arXiv:2510.13310},
   year = {2025},
   url = {https://arxiv.org/abs/2510.13310}
@@ -150,6 +150,7 @@ and
   url = {https://arxiv.org/abs/2409.12190}
 }
 ```
+
 
 
 
