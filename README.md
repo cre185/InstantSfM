@@ -133,10 +133,11 @@ Want to apply several modifications to config files while keeping the original o
 If you find our code or paper useful, please consider citing:
 ```
 @article{zhong2025instantsfm,
-  author = {Jiankun Zhong, Zitong Zhan, Quankai Gao, Ziyu Chen, Haozhe Lou, Jiageng Mao, Ulrich Neumann, Yue Wang},
   title = {InstantSfM: Fully Sparse and Parallel Structure-from-Motion},
-  booktitle = {arXiv preprint arXiv:2510.13310},
-  year = {2025}
+  author = {Jiankun Zhong, Zitong Zhan, Quankai Gao, Ziyu Chen, Haozhe Lou, Jiageng Mao, Ulrich Neumann, Yue Wang},
+  journal = {arXiv preprint arXiv:2510.13310},
+  year = {2025},
+  url = {https://arxiv.org/abs/2510.13310}
 }
 ```
 and
@@ -149,6 +150,7 @@ and
   url = {https://arxiv.org/abs/2409.12190}
 }
 ```
+
 
 
 
