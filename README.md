@@ -46,9 +46,9 @@ Create a conda environment:
 conda create -n instantsfm python=3.12
 conda activate instantsfm
 ```
-Install PyTorch dependencies, use the following command to install the recommended version of PyTorch (2.3.1 with CUDA 12.1), or choose your own version according to your CUDA version [here](https://pytorch.org/get-started/previous-versions/):  
+Install PyTorch and dependencies. We have tested with PyTorch (2.3.1 with CUDA 12.1). Choose your own version according to your CUDA version [here](https://pytorch.org/get-started/previous-versions/):  
 ```bash
-pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+pip3 install torch torchvision
 ```
 If scikit-sparse installation fails due to suitesparse, this dependency shall be installed manually. For example, 
 ```bash
@@ -76,6 +76,7 @@ fatal error: cudss.h: No such file or directory
 compilation terminated
 ```
 then you need to download and install cuDSS package from [here](https://developer.nvidia.com/cudss-downloads?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=20.04&target_type=deb_local).  
+The cuDSS should match the version of CUDA toolchain. For example, cuDSS 0.7 should be used with CUDA 13. 
 
 If opencv-python fail to load xcb, you can install opencv-python-headless
 ```bash
@@ -150,6 +151,7 @@ and
   url = {https://arxiv.org/abs/2409.12190}
 }
 ```
+
 
 
 
