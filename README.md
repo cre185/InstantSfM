@@ -103,7 +103,12 @@ To run the demo, simply try the command `python demo.py`. In the demo, you can c
 In both cases, the output will be saved in the corresponding folder(`demo_output/` or your specified folder), and the results will be displayed directly in the web viewer.  
 
 ## Docker quick test (kitchen example)
-If you built the provided `Dockerfile` into an image tagged `instantsfm`, you can sanity‑check the pipeline on the bundled `examples/kitchen` data with a single container run. The command below mounts the repo so results persist to your host and uses `--rm` for a clean exit:
+If you built the provided `Dockerfile` into an image tagged `instantsfm`, 
+you can sanity‑check the pipeline on the bundled `examples/kitchen` data with a single container run. This Dockerfile supports both arm64 and x86_64 architectures. Build the Docker image with:
+```bash
+docker build -t instantsfm .
+```
+The command below mounts the repo so results persist to your host and uses `--rm` for a clean exit:
 ```bash
 docker run --rm --gpus all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
   -v "$PWD":/workspace/InstantSfM -w /workspace/InstantSfM instantsfm \
