@@ -102,6 +102,16 @@ To run the demo, simply try the command `python demo.py`. In the demo, you can c
 ```
 In both cases, the output will be saved in the corresponding folder(`demo_output/` or your specified folder), and the results will be displayed directly in the web viewer.  
 
+## Docker quick test (kitchen example)
+If you built the provided `Dockerfile` into an image tagged `instantsfm`, you can sanity‑check the pipeline on the bundled `examples/kitchen` data with a single container run. The command below mounts the repo so results persist to your host and uses `--rm` for a clean exit:
+```bash
+docker run --rm --gpus all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
+  -v "$PWD":/workspace/InstantSfM -w /workspace/InstantSfM instantsfm \
+  bash -lc "ins-feat --data_path examples/kitchen --feature_handler colmap --manual_config_name colmap && \
+            ins-sfm --data_path examples/kitchen --manual_config_name colmap --export_txt"
+```
+Outputs will appear under `examples/kitchen/sparse` on the host.
+
 ## 3. Command Line Usage
 The whole pipeline consists of three main steps: feature extraction and matching, global structure from motion (SfM), and 3DGS training.  
 Before performing these steps, prepair your dataset (a collection of images) in a folder structure like mentioned in the demo section, that is, a folder containing a subfolder `images/` with all the images inside.  
