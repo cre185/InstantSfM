@@ -1,4 +1,4 @@
-<img src="img/USC-Logos.png" width=120px /><img src="img/University_at_Buffalo_logo.png" width=120px /><img src="img/Tsinghua_University_Logo.png" width=50px />
+<img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/USC-Logos.png?raw=true" width=120px /><img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/University_at_Buffalo_logo.png?raw=true" width=120px /><img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/Tsinghua_University_Logo.png?raw=true" width=50px />
 
 <div align="center">
 
