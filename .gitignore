@@ -187,3 +187,4 @@ debug_output/*
 test
 tmp/*
 demo_tmp/
+examples/*

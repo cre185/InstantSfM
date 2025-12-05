@@ -36,6 +36,7 @@
 **⚠️Please note that this repository is still under active development. We will keep updating it regularly. Feel free to open an issue if you encounter any problem.**
 
 ## News📰  
+- **2025/12/02**: Added a Dockerfile and quick test command to run the bundled `examples/kitchen` dataset.  
 - **2025/11/27**: We changed the data structure into a more SIMD-friendly format, which further speeds up the whole pipeline by around 10%.  
 
 ## 1. Installation  
@@ -101,6 +102,21 @@ To run the demo, simply try the command `python demo.py`. In the demo, you can c
     - database.db (optional, will be used if provided, and will be generated if not provided)
 ```
 In both cases, the output will be saved in the corresponding folder(`demo_output/` or your specified folder), and the results will be displayed directly in the web viewer.  
+
+## Docker quick test (kitchen example)
+If you built the provided `Dockerfile` into an image tagged `instantsfm`, 
+you can sanity‑check the pipeline on the bundled `examples/kitchen` data with a single container run. This Dockerfile supports both arm64 and x86_64 architectures. Build the Docker image with:
+```bash
+docker build -t instantsfm .
+```
+The command below mounts the repo so results persist to your host and uses `--rm` for a clean exit:
+```bash
+docker run --rm --gpus all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
+  -v "$PWD":/workspace/InstantSfM -w /workspace/InstantSfM instantsfm \
+  bash -lc "ins-feat --data_path examples/kitchen --feature_handler colmap --manual_config_name colmap && \
+            ins-sfm --data_path examples/kitchen --manual_config_name colmap --export_txt"
+```
+Outputs will appear under `examples/kitchen/sparse` on the host.
 
 ## 3. Command Line Usage
 The whole pipeline consists of three main steps: feature extraction and matching, global structure from motion (SfM), and 3DGS training.  
