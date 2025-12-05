@@ -36,6 +36,7 @@
 **⚠️Please note that this repository is still under active development. We will keep updating it regularly. Feel free to open an issue if you encounter any problem.**
 
 ## News📰  
+- **2025/12/02**: Added a Dockerfile and quick test command to run the bundled `examples/kitchen` dataset.  
 - **2025/11/27**: We changed the data structure into a more SIMD-friendly format, which further speeds up the whole pipeline by around 10%.  
 
 ## 1. Installation  
