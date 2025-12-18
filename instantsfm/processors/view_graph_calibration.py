@@ -31,14 +31,13 @@ def SolveViewGraphCalibration(view_graph:ViewGraph, cameras, images, VIEW_GRAPH_
     for image_pair in valid_image_pairs.values():
         image1, image2 = images[image_pair.image_id1], images[image_pair.image_id2]
         cam1, cam2 = cameras[image1.cam_id], cameras[image2.cam_id]
-        if cam1 == cam2:
+        cam_id1, cam_id2 = image1.cam_id, image2.cam_id
+        if cam_id1 == cam_id2:
             cost_function = FetzerFocalLengthSameCameraCostFunction(image_pair.F, cam1.principal_point)
-            idx = image1.cam_id
-            problem.add_residual_block(cost_function, loss_function, [focals[idx:idx+1]])
+            problem.add_residual_block(cost_function, loss_function, [focals[cam_id1:cam_id1+1]])
         else:
             cost_function = FetzerFocalLengthCostFunction(image_pair.F, cam1.principal_point, cam2.principal_point)
-            idx1, idx2 = image1.cam_id, image2.cam_id
-            problem.add_residual_block(cost_function, loss_function, [focals[idx1:idx1+1], focals[idx2:idx2+1]])
+            problem.add_residual_block(cost_function, loss_function, [focals[cam_id1:cam_id1+1], focals[cam_id2:cam_id2+1]])
     problem.set_parameter_lower_bound(focals, 0, 1e-3)
 
     options.max_num_iterations = VIEW_GRAPH_CALIBRATOR_OPTIONS['max_num_iterations']
@@ -72,7 +71,6 @@ def SolveViewGraphCalibration(view_graph:ViewGraph, cameras, images, VIEW_GRAPH_
     # manually calculate the residuals
     for idx, (pair_id, image_pair) in enumerate(valid_image_pairs.items()):
         residual = residuals[2 * idx:2 * idx + 2]
-        cost_function.Evaluate([cam1.focal_length, cam2.focal_length], residuals, None)
         if residual[0]**2 + residual[1]**2 > thres_two_view_error_sq:
             invalid_counter += 1
             image_pair.is_valid = False
