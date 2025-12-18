@@ -21,7 +21,7 @@ dependencies = [
     "scipy==1.13.0",
     "scikit-sparse==0.4.15",
     "tqdm==4.66.5",
-    "pyceres==2.3",
+    "pyceres @ git+https://github.com/cvg/pyceres.git@v2.6",
     "kornia==0.8.0",
     "viser==0.2.11",
     "imageio-ffmpeg",
@@ -34,10 +34,8 @@ dependencies = [
     "plotly",
     "splines",
     "jaxtyping",
-    "triton",
     "gsplat",
     "pypose @ git+https://github.com/pypose/pypose.git@bae",
-    "fused-ssim @ git+https://github.com/rahul-goel/fused-ssim",
 ]
 
 # [project.urls]
