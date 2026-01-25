@@ -56,17 +56,32 @@ RUN wget -q http://ceres-solver.org/ceres-solver-${CERES_VERSION}.tar.gz \
 
 WORKDIR /workspace/InstantSfM
 
-# Install Python dependencies (including external git deps) first for better layer caching
+# Install Python deps separately so code edits don't bust the cache.
 COPY pyproject.toml README.md ./
+RUN python - <<'PY'
+import tomllib, pathlib
+py = tomllib.loads(pathlib.Path('pyproject.toml').read_text())
+reqs = py['project']['dependencies']
+pathlib.Path('/tmp/requirements.txt').write_text('\n'.join(reqs) + '\n')
+PY
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r /tmp/requirements.txt \
+    && git clone --depth=1 https://github.com/rahul-goel/fused-ssim /tmp/fused-ssim
+RUN python - <<'PY'
+from pathlib import Path
+p = Path('/tmp/fused-ssim/setup.py')
+t = p.read_text()
+t = t.replace('elif torch.mps.is_available():','elif False and torch.mps.is_available():')
+t = t.replace("elif hasattr(torch, 'xpu'):", "elif False and hasattr(torch, 'xpu'):")
+p.write_text(t)
+PY
+RUN pip install --no-cache-dir --no-build-isolation /tmp/fused-ssim \
+    && MAX_JOBS=$(nproc) pip install --no-cache-dir --no-build-isolation git+https://github.com/zitongzhan/bae.git
+
+# Install the project itself (editable, no deps) after source copy.
 COPY instantsfm instantsfm
 COPY demo.py demo.py
-RUN pip install --no-cache-dir numpy==1.26.4 \
-    && git clone --depth=1 https://github.com/rahul-goel/fused-ssim /tmp/fused-ssim \
-    && python -c "from pathlib import Path; p=Path('/tmp/fused-ssim/setup.py'); t=p.read_text(); t=t.replace('elif torch.mps.is_available():','elif False and torch.mps.is_available():'); t=t.replace('elif hasattr(torch, \\'xpu\\'):', 'elif False and hasattr(torch, \\'xpu\\'):'); p.write_text(t)" \
-    && pip install --no-cache-dir --no-build-isolation /tmp/fused-ssim \
-    && pip install --no-cache-dir --upgrade pip \
-    && MAX_JOBS=$(nproc) pip install --no-cache-dir --no-build-isolation git+https://github.com/zitongzhan/bae.git \
-    && pip install --no-cache-dir .
+RUN pip install --no-cache-dir -e . --no-deps
 
 # Bring in the rest of the project (assets, configs, etc.)
 COPY . .
