@@ -63,7 +63,7 @@ RUN set -euo pipefail \
     && pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r /tmp/requirements.txt \
     && git clone --depth=1 https://github.com/rahul-goel/fused-ssim /tmp/fused-ssim \
-    && python -c "from pathlib import Path; p=Path('/tmp/fused-ssim/setup.py'); t=p.read_text(); t=t.replace(\"elif torch.mps.is_available():\", \"elif False and torch.mps.is_available():\"); t=t.replace(\"elif hasattr(torch, 'xpu'):\", \"elif False and hasattr(torch, 'xpu'):\"); p.write_text(t)" \
+    && python -c "from pathlib import Path; p=Path('/tmp/fused-ssim/setup.py'); t=p.read_text(); t=t.replace('elif torch.mps.is_available():','elif False and torch.mps.is_available():'); t=t.replace('elif hasattr(torch, \\'xpu\\'):', 'elif False and hasattr(torch, \\'xpu\\'):'); p.write_text(t)" \
     && pip install --no-cache-dir --no-build-isolation /tmp/fused-ssim \
     && MAX_JOBS=$(nproc) pip install --no-cache-dir --no-build-isolation git+https://github.com/zitongzhan/bae.git
 
