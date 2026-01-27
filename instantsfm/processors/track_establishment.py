@@ -27,9 +27,14 @@ class TrackEngine:
             matches = pair.matches
             for idx in pair.inliers:
                 point1, point2 = matches[idx]
+                # Cast to Python int to avoid uint32 overflow on bit ops.
+                image_id1 = int(pair.image_id1)
+                image_id2 = int(pair.image_id2)
+                point1 = int(point1)
+                point2 = int(point2)
 
-                point_global_id1 = (int(pair.image_id1) << 32) | point1
-                point_global_id2 = (int(pair.image_id2) << 32) | point2
+                point_global_id1 = (image_id1 << 32) | point1
+                point_global_id2 = (image_id2 << 32) | point2
                 
                 if point_global_id2 < point_global_id1:
                     self.uf.Union(point_global_id1, point_global_id2)
@@ -43,15 +48,19 @@ class TrackEngine:
                 continue
             for idx in pair.inliers:
                 point1, point2 = pair.matches[idx]
+                image_id1 = int(pair.image_id1)
+                image_id2 = int(pair.image_id2)
+                point1 = int(point1)
+                point2 = int(point2)
 
-                point_global_id1 = (pair.image_id1 << 32) | point1
+                point_global_id1 = (image_id1 << 32) | point1
                 
                 track_id = self.uf.Find(point_global_id1)
 
                 if track_id not in track_map:
                     track_map[track_id] = defaultdict(int)  # this is the reference counter
-                track_map[track_id][(pair.image_id1, point1)] += 1
-                track_map[track_id][(pair.image_id2, point2)] += 1
+                track_map[track_id][(image_id1, point1)] += 1
+                track_map[track_id][(image_id2, point2)] += 1
 
         tracks_dict = {track_id: np.concatenate([np.array(list(correspondences.keys())), 
                                             -np.array(list(correspondences.values()))[:, None]], axis=-1) 
