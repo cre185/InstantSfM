@@ -1,6 +1,13 @@
 {
 	"name": "InstantSFM",
 	"image": "instantsfm",
+	
+	// Comment out and comment "image" if you haven't built the image manually
+	// "build": {
+	// 		"dockerfile": "../Dockerfile",
+	// 		"context": ".."
+    // },
+
 	"runArgs": [
 		"--gpus=all",
 		"--ipc=host",
