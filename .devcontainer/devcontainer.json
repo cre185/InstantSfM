@@ -1,0 +1,45 @@
+{
+	"name": "InstantSFM",
+	"image": "instantsfm",
+	"runArgs": [
+		"--gpus=all",
+		"--ipc=host",
+		"--ulimit",
+		"memlock=-1",
+		"--ulimit",
+		"stack=67108864",
+		"--shm-size=12gb"
+	],
+
+	"features": {
+		"ghcr.io/devcontainers/features/common-utils:2": {
+			"username": "user",
+			"userUid": "automatic",
+			"userGid": "automatic",
+			"installZsh": "false",
+			"installOhMyZsh": "false",
+			"upgradePackages": true
+		}
+	},
+
+	"remoteUser": "user",
+	"mounts": [
+		"source=${localEnv:USERPROFILE}/.cache,target=/home/user/.cache,type=bind,consistency=cached",
+		"source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+	],
+	
+	"workspaceFolder": "/workspace",
+
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-toolsai.jupyter",
+				"mutantdino.resourcemonitor",
+				"ms-azuretools.vscode-docker",
+				"nvidia.nsight-vscode-edition",
+				"charliermarsh.ruff"
+			]
+		}
+	}
+}
