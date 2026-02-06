@@ -31,45 +31,54 @@ def pairwise_cost(points, camera_translations, scales, translations, is_calibrat
 # functions that reproject points from cameras to images, each function is based on a different camera model
 @map_transform
 def reproject_simple_pinhole(points, extrinsics, intrinsics, pp):
-    points_proj = rotate_quat(points, extrinsics)
-    points_proj = points_proj[..., :2] / points_proj[..., 2].unsqueeze(-1)
+    points_cam = rotate_quat(points, extrinsics)
+    depth = points_cam[..., 2].unsqueeze(-1)  # [N, 1]
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
     f = intrinsics[..., -1].unsqueeze(-1)
     points_proj = points_proj * f + pp
-    return points_proj
+    # Return [N, 3] with (x, y, depth)
+    return torch.cat([points_proj, depth], dim=-1)
 
 @map_transform
 def reproject_pinhole(points, extrinsics, intrinsics, pp):
-    points_proj = rotate_quat(points, extrinsics)
-    points_proj = points_proj[..., :2] / points_proj[..., 2].unsqueeze(-1)
+    points_cam = rotate_quat(points, extrinsics)
+    depth = points_cam[..., 2].unsqueeze(-1)  # [N, 1]
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
     ff = intrinsics[..., -2:]
     points_proj = points_proj * ff + pp
-    return points_proj
+    # Return [N, 3] with (x, y, depth)
+    return torch.cat([points_proj, depth], dim=-1)
 
 @map_transform
 def reproject_simple_radial(points, extrinsics, intrinsics, pp):
-    points_proj = rotate_quat(points, extrinsics)
-    points_proj = points_proj[..., :2] / points_proj[..., 2].unsqueeze(-1)
+    points_cam = rotate_quat(points, extrinsics)
+    depth = points_cam[..., 2].unsqueeze(-1)  # [N, 1]
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
     f = intrinsics[..., -2].unsqueeze(-1)
     k = intrinsics[..., -1].unsqueeze(-1)
     r2 = torch.sum(points_proj[..., :2]**2, dim=-1).unsqueeze(-1)
     points_proj = points_proj * (1 + k * r2) * f + pp
-    return points_proj
+    # Return [N, 3] with (x, y, depth)
+    return torch.cat([points_proj, depth], dim=-1)
 
 @map_transform
 def reproject_radial(points, extrinsics, intrinsics, pp):
-    points_proj = rotate_quat(points, extrinsics)
-    points_proj = points_proj[..., :2] / points_proj[..., 2].unsqueeze(-1)
+    points_cam = rotate_quat(points, extrinsics)
+    depth = points_cam[..., 2].unsqueeze(-1)  # [N, 1]
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
     f = intrinsics[..., -3].unsqueeze(-1)
     k1 = intrinsics[..., -2].unsqueeze(-1)
     k2 = intrinsics[..., -1].unsqueeze(-1)
     r2 = torch.sum(points_proj[..., :2]**2, dim=-1).unsqueeze(-1)
     points_proj = points_proj * (1 + k1 * r2 + k2 * r2**2) * f + pp
-    return points_proj
+    # Return [N, 3] with (x, y, depth)
+    return torch.cat([points_proj, depth], dim=-1)
 
 @map_transform
 def reproject_opencv(points, extrinsics, intrinsics, pp):
-    points_proj = rotate_quat(points, extrinsics)
-    points_proj = points_proj[..., :2] / points_proj[..., 2].unsqueeze(-1)
+    points_cam = rotate_quat(points, extrinsics)
+    depth = points_cam[..., 2].unsqueeze(-1)  # [N, 1]
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
     ff = intrinsics[..., -6:-4]
     k1 = intrinsics[..., -4].unsqueeze(-1)
     k2 = intrinsics[..., -3].unsqueeze(-1)
@@ -81,12 +90,14 @@ def reproject_opencv(points, extrinsics, intrinsics, pp):
     d = d + p.flip(-1) * (r2 + 2 * points_proj[..., :2]**2)
     points_proj = points_proj + d
     points_proj = points_proj * ff + pp
-    return points_proj
+    # Return [N, 3] with (x, y, depth)
+    return torch.cat([points_proj, depth], dim=-1)
 
 @map_transform
 def reproject_opencv_fisheye(points, extrinsics, intrinsics, pp):
-    points_proj = rotate_quat(points, extrinsics)
-    points_proj = points_proj[..., :2] / points_proj[..., 2].unsqueeze(-1)
+    points_cam = rotate_quat(points, extrinsics)
+    depth = points_cam[..., 2].unsqueeze(-1)  # [N, 1]
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
     ff = intrinsics[..., -6:-4]
     k1 = intrinsics[..., -4].unsqueeze(-1)
     k2 = intrinsics[..., -3].unsqueeze(-1)
@@ -99,12 +110,14 @@ def reproject_opencv_fisheye(points, extrinsics, intrinsics, pp):
     radial = 1 + k1 * r2 + k2 * r2**2 + k3 * r2**3
     points_proj = points_proj * radial
     points_proj = points_proj * ff + pp
-    return points_proj
+    # Return [N, 3] with (x, y, depth)
+    return torch.cat([points_proj, depth], dim=-1)
 
 @map_transform
 def reproject_full_opencv(points, extrinsics, intrinsics, pp):
-    points_proj = rotate_quat(points, extrinsics)
-    points_proj = points_proj[..., :2] / points_proj[..., 2].unsqueeze(-1)
+    points_cam = rotate_quat(points, extrinsics)
+    depth = points_cam[..., 2].unsqueeze(-1)  # [N, 1]
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
     ff = intrinsics[..., -10:-8]
     k1 = intrinsics[..., -8].unsqueeze(-1)
     k2 = intrinsics[..., -7].unsqueeze(-1)
@@ -120,14 +133,16 @@ def reproject_full_opencv(points, extrinsics, intrinsics, pp):
     d = d + p.flip(-1) * (r2 + 2 * points_proj[..., :2]**2)
     points_proj = points_proj + d
     points_proj = points_proj * ff + pp
-    return points_proj
+    # Return [N, 3] with (x, y, depth)
+    return torch.cat([points_proj, depth], dim=-1)
 
 @map_transform
 def reproject_fov(points, extrinsics, intrinsics, pp):
     # TODO: complete this function
     raise NotImplementedError
-    points_proj = rotate_quat(points, extrinsics)
-    points_proj = points_proj[..., :2] / points_proj[..., 2].unsqueeze(-1)  # add dimension for broadcasting
+    points_cam = rotate_quat(points, extrinsics)
+    depth = points_cam[..., 2].unsqueeze(-1)  # [N, 1]
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)  # add dimension for broadcasting
     ff = intrinsics[..., -2].unsqueeze(-1)
     omega = intrinsics[..., -1].unsqueeze(-1)
     r2 = torch.sum(points_proj[..., :2]**2, dim=-1).unsqueeze(-1)
@@ -147,12 +162,14 @@ def reproject_fov(points, extrinsics, intrinsics, pp):
     factor[else_mask] = numerator / (radius * omega[else_mask])
 
     points_proj = points_proj * factor * ff + pp
-    return points_proj
+    # Return [N, 3] with (x, y, depth)
+    return torch.cat([points_proj, depth], dim=-1)
 
 @map_transform
 def reproject_simple_radial_fisheye(points, extrinsics, intrinsics, pp):
-    points_proj = rotate_quat(points, extrinsics)
-    points_proj = points_proj[..., :2] / points_proj[..., 2].unsqueeze(-1)
+    points_cam = rotate_quat(points, extrinsics)
+    depth = points_cam[..., 2].unsqueeze(-1)  # [N, 1]
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
     f = intrinsics[..., -2].unsqueeze(-1)
     k = intrinsics[..., -1].unsqueeze(-1)
     r2 = torch.sum(points_proj[..., :2]**2, dim=-1).unsqueeze(-1)
@@ -160,12 +177,14 @@ def reproject_simple_radial_fisheye(points, extrinsics, intrinsics, pp):
     theta = torch.atan(r)
     points_proj = points_proj * theta / r
     points_proj = points_proj * (1 + k * r2) * f + pp
-    return points_proj
+    # Return [N, 3] with (x, y, depth)
+    return torch.cat([points_proj, depth], dim=-1)
 
 @map_transform
 def reproject_radial_fisheye(points, extrinsics, intrinsics, pp):
-    points_proj = rotate_quat(points, extrinsics)
-    points_proj = points_proj[..., :2] / points_proj[..., 2].unsqueeze(-1)
+    points_cam = rotate_quat(points, extrinsics)
+    depth = points_cam[..., 2].unsqueeze(-1)  # [N, 1]
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
     f = intrinsics[..., -3].unsqueeze(-1)
     k1 = intrinsics[..., -2].unsqueeze(-1)
     k2 = intrinsics[..., -1].unsqueeze(-1)
@@ -174,14 +193,16 @@ def reproject_radial_fisheye(points, extrinsics, intrinsics, pp):
     theta = torch.atan(r)
     points_proj = points_proj * theta / r
     points_proj = points_proj * (1 + k1 * r2 + k2 * r2**2) * f + pp
-    return points_proj
+    # Return [N, 3] with (x, y, depth)
+    return torch.cat([points_proj, depth], dim=-1)
 
 @map_transform
 def reproject_thin_prism_fisheye(points, extrinsics, intrinsics, pp):
     # TODO: complete this function
     raise NotImplementedError
-    points_proj = rotate_quat(points, extrinsics)
-    points_proj = points_proj[..., :2] / points_proj[..., 2].unsqueeze(-1)
+    points_cam = rotate_quat(points, extrinsics)
+    depth = points_cam[..., 2].unsqueeze(-1)  # [N, 1]
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
     ff = intrinsics[..., -10:-8]
     k1 = intrinsics[..., -8].unsqueeze(-1)
     k2 = intrinsics[..., -7].unsqueeze(-1)
@@ -200,12 +221,146 @@ def reproject_thin_prism_fisheye(points, extrinsics, intrinsics, pp):
     d = d + sx * r2
     points_proj = points_proj + d
     points_proj = points_proj * ff + pp
+    # Return [N, 3] with (x, y, depth)
+    return torch.cat([points_proj, depth], dim=-1)
+
+# No-depth versions: return only [N, 2] (x, y) without depth
+@map_transform
+def reproject_simple_pinhole_no_depth(points, extrinsics, intrinsics, pp):
+    points_cam = rotate_quat(points, extrinsics)
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
+    f = intrinsics[..., -1].unsqueeze(-1)
+    points_proj = points_proj * f + pp
     return points_proj
+
+@map_transform
+def reproject_pinhole_no_depth(points, extrinsics, intrinsics, pp):
+    points_cam = rotate_quat(points, extrinsics)
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
+    ff = intrinsics[..., -2:]
+    points_proj = points_proj * ff + pp
+    return points_proj
+
+@map_transform
+def reproject_simple_radial_no_depth(points, extrinsics, intrinsics, pp):
+    points_cam = rotate_quat(points, extrinsics)
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
+    f = intrinsics[..., -2].unsqueeze(-1)
+    k = intrinsics[..., -1].unsqueeze(-1)
+    r2 = torch.sum(points_proj[..., :2]**2, dim=-1).unsqueeze(-1)
+    points_proj = points_proj * (1 + k * r2) * f + pp
+    return points_proj
+
+@map_transform
+def reproject_radial_no_depth(points, extrinsics, intrinsics, pp):
+    points_cam = rotate_quat(points, extrinsics)
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
+    f = intrinsics[..., -3].unsqueeze(-1)
+    k1 = intrinsics[..., -2].unsqueeze(-1)
+    k2 = intrinsics[..., -1].unsqueeze(-1)
+    r2 = torch.sum(points_proj[..., :2]**2, dim=-1).unsqueeze(-1)
+    points_proj = points_proj * (1 + k1 * r2 + k2 * r2**2) * f + pp
+    return points_proj
+
+@map_transform
+def reproject_opencv_no_depth(points, extrinsics, intrinsics, pp):
+    points_cam = rotate_quat(points, extrinsics)
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
+    ff = intrinsics[..., -6:-4]
+    k1 = intrinsics[..., -4].unsqueeze(-1)
+    k2 = intrinsics[..., -3].unsqueeze(-1)
+    p = intrinsics[..., -2:]
+    r2 = torch.sum(points_proj[..., :2]**2, dim=-1).unsqueeze(-1)
+    uv = (points_proj[..., 0] * points_proj[..., 1]).unsqueeze(-1)
+    radial = k1 * r2 + k2 * r2**2
+    d = points_proj * radial + 2 * p * uv
+    d = d + p.flip(-1) * (r2 + 2 * points_proj[..., :2]**2)
+    points_proj = points_proj + d
+    points_proj = points_proj * ff + pp
+    return points_proj
+
+@map_transform
+def reproject_opencv_fisheye_no_depth(points, extrinsics, intrinsics, pp):
+    points_cam = rotate_quat(points, extrinsics)
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
+    ff = intrinsics[..., -6:-4]
+    k1 = intrinsics[..., -4].unsqueeze(-1)
+    k2 = intrinsics[..., -3].unsqueeze(-1)
+    k3 = intrinsics[..., -2].unsqueeze(-1)
+    r2 = torch.sum(points_proj[..., :2]**2, dim=-1).unsqueeze(-1)
+    r = torch.sqrt(r2)
+    theta = torch.atan(r)
+    points_proj = points_proj * theta / r
+    radial = 1 + k1 * r2 + k2 * r2**2 + k3 * r2**3
+    points_proj = points_proj * radial
+    points_proj = points_proj * ff + pp
+    return points_proj
+
+@map_transform
+def reproject_full_opencv_no_depth(points, extrinsics, intrinsics, pp):
+    points_cam = rotate_quat(points, extrinsics)
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
+    ff = intrinsics[..., -10:-8]
+    k1 = intrinsics[..., -8].unsqueeze(-1)
+    k2 = intrinsics[..., -7].unsqueeze(-1)
+    p = intrinsics[..., -6:-4]
+    k3 = intrinsics[..., -4].unsqueeze(-1)
+    k4 = intrinsics[..., -3].unsqueeze(-1)
+    k5 = intrinsics[..., -2].unsqueeze(-1)
+    k6 = intrinsics[..., -1].unsqueeze(-1)
+    r2 = torch.sum(points_proj[..., :2]**2, dim=-1).unsqueeze(-1)
+    uv = (points_proj[..., 0] * points_proj[..., 1]).unsqueeze(-1)
+    radial = (1 + k1 * r2 + k2 * r2**2 + k3 * r2**3) / (1 + k4 * r2 + k5 * r2**2 + k6 * r2**3) - 1
+    d = points_proj * radial + 2 * p * uv
+    d = d + p.flip(-1) * (r2 + 2 * points_proj[..., :2]**2)
+    points_proj = points_proj + d
+    points_proj = points_proj * ff + pp
+    return points_proj
+
+@map_transform
+def reproject_fov_no_depth(points, extrinsics, intrinsics, pp):
+    raise NotImplementedError
+
+@map_transform
+def reproject_simple_radial_fisheye_no_depth(points, extrinsics, intrinsics, pp):
+    points_cam = rotate_quat(points, extrinsics)
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
+    f = intrinsics[..., -2].unsqueeze(-1)
+    k = intrinsics[..., -1].unsqueeze(-1)
+    r2 = torch.sum(points_proj[..., :2]**2, dim=-1).unsqueeze(-1)
+    r = torch.sqrt(r2)
+    theta = torch.atan(r)
+    points_proj = points_proj * theta / r
+    points_proj = points_proj * (1 + k * r2) * f + pp
+    return points_proj
+
+@map_transform
+def reproject_radial_fisheye_no_depth(points, extrinsics, intrinsics, pp):
+    points_cam = rotate_quat(points, extrinsics)
+    points_proj = points_cam[..., :2] / points_cam[..., 2].unsqueeze(-1)
+    f = intrinsics[..., -3].unsqueeze(-1)
+    k1 = intrinsics[..., -2].unsqueeze(-1)
+    k2 = intrinsics[..., -1].unsqueeze(-1)
+    r2 = torch.sum(points_proj[..., :2]**2, dim=-1).unsqueeze(-1)
+    r = torch.sqrt(r2)
+    theta = torch.atan(r)
+    points_proj = points_proj * theta / r
+    points_proj = points_proj * (1 + k1 * r2 + k2 * r2**2) * f + pp
+    return points_proj
+
+@map_transform
+def reproject_thin_prism_fisheye_no_depth(points, extrinsics, intrinsics, pp):
+    raise NotImplementedError
 
 # all the reprojection functions are based on the camera model used, import a list of functions can simplify the code
 reproject_funcs = [reproject_simple_pinhole, reproject_pinhole, reproject_simple_radial, reproject_radial, reproject_opencv,
                    reproject_opencv_fisheye, reproject_full_opencv, reproject_fov, reproject_simple_radial_fisheye,
                    reproject_radial_fisheye, reproject_thin_prism_fisheye]
+
+reproject_funcs_no_depth = [reproject_simple_pinhole_no_depth, reproject_pinhole_no_depth, reproject_simple_radial_no_depth, 
+                             reproject_radial_no_depth, reproject_opencv_no_depth, reproject_opencv_fisheye_no_depth, 
+                             reproject_full_opencv_no_depth, reproject_fov_no_depth, reproject_simple_radial_fisheye_no_depth,
+                             reproject_radial_fisheye_no_depth, reproject_thin_prism_fisheye_no_depth]
 
 def fetzer_d(ai, bi, aj, bj, u, v):
     d = np.zeros(4)

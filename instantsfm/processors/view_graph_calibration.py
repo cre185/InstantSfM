@@ -5,6 +5,7 @@ import pyceres
 
 from instantsfm.scene.defs import ConfigurationType, ViewGraph
 from instantsfm.utils.cost_function import FetzerFocalLengthCostFunction, FetzerFocalLengthSameCameraCostFunction, fetzer_ds, fetzer_cost
+from instantsfm.utils.optimization_models import FetzerCalibrationModel
 
 # used by torch LM
 import torch
@@ -83,14 +84,6 @@ class TorchVGC():
 
     def Optimize(self, view_graph:ViewGraph, cameras, images, VIEW_GRAPH_CALIBRATOR_OPTIONS):
         cost_fn = fetzer_cost
-        class FetzerNonBatched(nn.Module):
-            def __init__(self, focals):
-                super().__init__()
-                self.focals = nn.Parameter(TrackingTensor(focals)) # (num_cameras, 1)
-            def forward(self, ds, camera_indices1, camera_indices2):
-                # ds: (num_pairs, 1, 3, 4)
-                loss = cost_fn(self.focals[camera_indices1], self.focals[camera_indices2], ds)
-                return loss
 
         valid_image_pairs = {pair_id: image_pair for pair_id, image_pair in view_graph.image_pairs.items()
                              if image_pair.is_valid and image_pair.config in [ConfigurationType.CALIBRATED, ConfigurationType.UNCALIBRATED]}
@@ -128,7 +121,7 @@ class TorchVGC():
         camera_indices1 = torch.tensor(np.array(camera_indices1_list), dtype=torch.int64).to(self.device).flatten()
         camera_indices2 = torch.tensor(np.array(camera_indices2_list), dtype=torch.int64).to(self.device).flatten()
 
-        model = FetzerNonBatched(focals)
+        model = FetzerCalibrationModel(focals, cost_fn)
         strategy = pp.optim.strategy.TrustRegion(radius=1e2, max=1e6, up=2.0, down=0.5**4)
         sparse_solver = PCG(tol=1e-5) # cuSolverSP()
         cauchy_kernel = Cauchy(VIEW_GRAPH_CALIBRATOR_OPTIONS['thres_loss_function'])

@@ -19,6 +19,16 @@ CONFIG = {
         'min_inlier_ratio': 0.25,
         'max_rotation_error': 10.,
     },
+    'SEMANTIC_OPTIONS': {
+        'min_observations_for_dynamic': 3,  # Minimum pairs to judge dynamic (per-camera)
+        'dynamic_inlier_threshold': 0.3,  # p25 inlier ratio threshold
+        'use_percentile': 25,  # Use p25 for dynamic detection
+        'min_observations_for_object': 3,  # Minimum track observations for object
+        'min_object_consistency': 0.7,  # Minimum label consistency in track
+        'track_length_ratio_threshold': 0.5,  # Ratio of short tracks indicating dynamic
+        'filter_dynamic_only': True,  # Only filter dynamic objects
+        'verbose_semantics': False,  # Print detailed statistics
+    },
     'ROTATION_ESTIMATOR_OPTIONS': {
         'max_num_l1_iterations': 10,
         'l1_step_convergence_threshold': 0.001,
@@ -49,8 +59,9 @@ CONFIG = {
         'optimize_points': True,
         'min_num_view_per_track': 2,
         'thres_loss_function': 1.,
-        'max_num_iterations': 200,
+        'max_num_iterations': 100,
         'function_tolerance': 5e-4,
+        'depth_weight': 0.1,
     },
     'TRIANGULATOR_OPTIONS': {
         'min_num_view_per_track': 2,
@@ -61,9 +72,21 @@ CONFIG = {
         'ba_global_max_refinements': 5,
         'ba_global_max_refinement_change': 0.0005,
     },
+    'VOTING_OPTIONS': {
+        'initial_angle_threshold': 5.0,
+        'target_party_ratio': 0.25,
+        'angle_threshold_step': 0.5,
+        'min_angle_threshold': 2.0,
+        'max_angle_threshold': 10.0,
+        'initial_distance_threshold': 0.5,
+        'distance_threshold_step': 0.1,
+        'min_distance_threshold': 0.1,
+        'max_distance_threshold': 1.0,
+    },
     
     # feature handler configs
     'FEATURE_HANDLER_OPTIONS': {
         'min_num_matches': 30,
+        'uniform_camera': True,
     },
 }

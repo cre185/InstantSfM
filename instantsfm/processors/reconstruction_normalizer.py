@@ -1,6 +1,6 @@
 import numpy as np
 
-def NormalizeReconstruction(images, tracks, depths=None, fixed_scale=False, extent=10., p0=0.1, p1=0.9):
+def NormalizeReconstruction(images, tracks, use_depths=False, fixed_scale=False, extent=10., p0=0.1, p1=0.9):
     # Batch compute image centers
     Rs = images.world2cams[:, :3, :3]  # (N, 3, 3)
     ts = images.world2cams[:, :3, 3]   # (N, 3)
@@ -12,7 +12,7 @@ def NormalizeReconstruction(images, tracks, depths=None, fixed_scale=False, exte
     bbox_max = coords_sorted[P1]
     mean_coord = np.mean(coords_sorted[P0:P1+1], axis=0)
 
-    if depths is not None:
+    if use_depths:
         # depth-based normalization
         depth_gt_list = []
         depth_pred_list = []

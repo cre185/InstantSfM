@@ -221,7 +221,7 @@ class Reconstruction:
             
             # Batch extract rotation and translation
             for idx in self._selected_indices:
-                img_id = self.images.ids[idx]
+                img_id = idx  # Use index as ID directly
                 world2cam = self.images.world2cams[idx]
                 
                 # Extract pose
@@ -313,7 +313,7 @@ class Reconstruction:
             fid.write(HEADER)
             
             for idx in self._selected_indices:
-                img_id = self.images.ids[idx]
+                img_id = idx  # Use index as ID directly
                 world2cam = self.images.world2cams[idx]
                 
                 # Extract pose
@@ -348,7 +348,7 @@ class Reconstruction:
         
         HEADER = (
             "# 3D point list with one line of data per point:\n"
-            "#   POINT3D_ID, X, Y, Z, R, G, B, ERROR, TRACK[] as (IMAGE_ID, POINT2D_IDX)\n"
+            "#   POINT3D_ID, X, Y, Z, R, G, B, ERROR, SEMANTIC_LABEL, SEMANTIC_CONF, TRACK[] as (IMAGE_ID, POINT2D_IDX)\n"
             f"# Number of points: {len(self.tracks)}, mean track length: {mean_track_length}\n"
         )
         
@@ -359,8 +359,10 @@ class Reconstruction:
                 xyz = self.tracks.xyzs[track_id]
                 color = self.tracks.colors[track_id]
                 obs = self.tracks.observations[track_id]
+                semantic_label = int(self.tracks.semantic_labels[track_id])
+                semantic_conf = float(self.tracks.semantic_confidences[track_id])
                 
-                point_header = [track_id, *xyz.tolist(), *[int(c) for c in color], 0.0]
+                point_header = [track_id, *xyz.tolist(), *[int(c) for c in color], 0.0, semantic_label, semantic_conf]
                 fid.write(" ".join(map(str, point_header)) + " ")
                 
                 track_strings = []

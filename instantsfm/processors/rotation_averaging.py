@@ -62,10 +62,7 @@ class RotationEstimator:
             self.fixed_camera_id = list(self.images.keys())[0]
             self.fixed_camera_rotation = self.images[self.fixed_camera_id].axis_angle()
         
-        self.rel_temp_info = {}
-        for pair_key, pair in self.image_pairs.items():
-            image_id1, image_id2 = pair.image_id1, pair.image_id2
-            self.rel_temp_info[pair_key] = {'R_rel': R.from_quat(pair.rotation).as_matrix()}
+        self.rel_temp_info = {pair_key: {'R_rel': R.from_quat(pair.rotation).as_matrix()} for pair_key, pair in self.image_pairs.items()}
         
         self.sparse_matrix = lil_matrix((len(self.rel_temp_info) * 3 + 3, num_dof))
         curr_pos = 0

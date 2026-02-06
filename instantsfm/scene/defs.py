@@ -22,7 +22,8 @@ class ImageView:
     
     @property
     def id(self) -> int:
-        return int(self._container.ids[self._index])
+        """Return the image index (used as ID)."""
+        return self._index
     
     @property
     def cam_id(self) -> int:
@@ -65,6 +66,14 @@ class ImageView:
         return self._container.depths[self._index]
     
     @property
+    def semantics(self) -> Optional[np.ndarray]:
+        return self._container.semantics[self._index]
+    
+    @semantics.setter
+    def semantics(self, value: Optional[np.ndarray]):
+        self._container.semantics[self._index] = value
+    
+    @property
     def features_undist(self) -> np.ndarray:
         return self._container.features_undist[self._index]
     
@@ -81,8 +90,31 @@ class ImageView:
         self._container.num_points3d[self._index] = value
     
     @property
+    def rig_info(self) -> tuple:
+        """Get rig information for this image.
+        
+        Returns:
+            (group_idx, camera_idx) or (-1, -1) if not part of a rig
+        """
+        return tuple(self._container.image_to_rig[self._index])
+    
+    @property
     def partner_ids(self) -> Dict:
-        return self._container.partner_ids[self._index]
+        """Get partner image IDs as dict (for backward compatibility).
+        
+        Returns empty dict if not part of a rig.
+        """
+        group_idx, cam_idx = self.rig_info
+        if group_idx == -1:
+            return {}
+        
+        # Build dict from rig_groups array
+        result = {}
+        rig_row = self._container.rig_groups[group_idx]
+        for i, folder_name in enumerate(self._container.rig_folder_names):
+            if rig_row[i] != -1:
+                result[folder_name] = rig_row[i]
+        return result
     
     def center(self) -> np.ndarray:
         """Camera center in world coordinates."""
@@ -111,7 +143,7 @@ class Images:
         self.num_images = num_images
         
         # Scalar attributes (N,)
-        self.ids = np.full(num_images, -1, dtype=np.int32)
+        # Note: We use array index as image ID directly, no separate ids array needed
         self.cam_ids = np.full(num_images, -1, dtype=np.int32)
         self.is_registered = np.zeros(num_images, dtype=bool)
         self.cluster_ids = np.full(num_images, -1, dtype=np.int32)
@@ -125,12 +157,28 @@ class Images:
         
         # Variable-length arrays (list of arrays)
         self.features = [np.array([]) for _ in range(num_images)]
-        self.depths = [np.array([]) for _ in range(num_images)]
         self.features_undist = [np.array([]) for _ in range(num_images)]
         self.point3d_ids = [[] for _ in range(num_images)]
+
+        # Depths
+        self.depths = [np.array([]) for _ in range(num_images)]
+
+        # Semantics
+        self.semantics = [None for _ in range(num_images)]  # Per-pixel instance IDs (H, W) int array or None
         
-        # Partner IDs for grouped cameras (list of dicts)
-        self.partner_ids = [{} for _ in range(num_images)]
+        # Multi-camera rig structure
+        self.rig_groups = np.array([]).reshape(0, 0)  # Empty initially
+        self.rig_folder_names = []  # Folder names for each camera position
+        self.image_to_rig = np.full((num_images, 2), -1, dtype=np.int32)  # (group_idx, camera_idx)
+        self.fixed_rel_poses = None  # (num_positions, 4, 4) Fixed relative poses (ref_to_camera) if available
+        
+        # Rig pose decomposition
+        self.ref_camera_idx = None  # Index of the reference camera in the rig
+        self.ref_poses = None  # (num_groups, 4, 4) Reference camera poses (world2cam) for each rig group
+        self.rel_poses = None  # (num_positions, 4, 4) Relative poses from reference to each camera position
+        
+        # Rig voting results
+        self.image_votes = None  # (num_images,) Vote weights for each image used in relative pose voting
     
     def __len__(self) -> int:
         return self.num_images
@@ -140,47 +188,6 @@ class Images:
         if index < 0 or index >= self.num_images:
             raise IndexError(f"Image index {index} out of range [0, {self.num_images})")
         return ImageView(self, index)
-    
-    def append(self, 
-               id: int = -1,
-               cam_id: int = -1,
-               filename: str = "",
-               is_registered: bool = False,
-               cluster_id: int = -1,
-               world2cam: Optional[np.ndarray] = None,
-               features: Optional[np.ndarray] = None,
-               depths: Optional[np.ndarray] = None,
-               features_undist: Optional[np.ndarray] = None,
-               point3d_ids: Optional[List[int]] = None,
-               num_points3d: int = 0,
-               partner_ids: Optional[Dict] = None) -> int:
-        """Append a new image to the container.
-        
-        Returns:
-            Index of the newly added image.
-        """
-        idx = self.num_images
-        self.num_images += 1
-        
-        # Resize arrays
-        self.ids = np.append(self.ids, id)
-        self.cam_ids = np.append(self.cam_ids, cam_id)
-        self.is_registered = np.append(self.is_registered, is_registered)
-        self.cluster_ids = np.append(self.cluster_ids, cluster_id)
-        self.num_points3d = np.append(self.num_points3d, num_points3d)
-        
-        self.filenames.append(filename)
-        
-        w2c = world2cam if world2cam is not None else np.eye(4)
-        self.world2cams = np.concatenate([self.world2cams, w2c[np.newaxis, :, :]], axis=0)
-        
-        self.features.append(features if features is not None else np.array([]))
-        self.depths.append(depths if depths is not None else np.array([]))
-        self.features_undist.append(features_undist if features_undist is not None else np.array([]))
-        self.point3d_ids.append(point3d_ids if point3d_ids is not None else [])
-        self.partner_ids.append(partner_ids if partner_ids is not None else {})
-        
-        return idx
     
     def get_registered_mask(self) -> np.ndarray:
         """Get boolean mask of registered images."""
@@ -280,6 +287,22 @@ class TrackView:
         self._container.colors[self._index] = value
     
     @property
+    def semantic_label(self) -> int:
+        return int(self._container.semantic_labels[self._index])
+    
+    @semantic_label.setter
+    def semantic_label(self, value: int):
+        self._container.semantic_labels[self._index] = value
+    
+    @property
+    def semantic_confidence(self) -> float:
+        return float(self._container.semantic_confidences[self._index])
+    
+    @semantic_confidence.setter
+    def semantic_confidence(self, value: float):
+        self._container.semantic_confidences[self._index] = value
+    
+    @property
     def is_initialized(self) -> bool:
         return bool(self._container.is_initialized[self._index])
     
@@ -322,6 +345,12 @@ class Tracks:
         # Colors (N, 3)
         self.colors = np.zeros((num_tracks, 3), dtype=np.uint8)
         
+        # Semantic labels (N,) - dominant instance ID per track, -1 if unknown
+        self.semantic_labels = np.full(num_tracks, -1, dtype=np.int32)
+        
+        # Semantic confidences (N,) - proportion of observations agreeing with dominant label
+        self.semantic_confidences = np.zeros(num_tracks, dtype=np.float32)
+        
         # Variable-length observations (list of arrays)
         # Each observation is array of shape (num_obs, 2) containing (image_id, feature_id)
         self.observations = [np.zeros((0, 2), dtype=np.int32) for _ in range(num_tracks)]
@@ -340,7 +369,9 @@ class Tracks:
                xyz: Optional[np.ndarray] = None,
                color: Optional[np.ndarray] = None,
                is_initialized: bool = False,
-               observations: Optional[np.ndarray] = None) -> int:
+               observations: Optional[np.ndarray] = None,
+               semantic_label: int = -1,
+               semantic_confidence: float = 0.0) -> int:
         """Append a new track to the container.
         
         Returns:
@@ -358,6 +389,9 @@ class Tracks:
         
         color_val = color if color is not None else np.zeros(3, dtype=np.uint8)
         self.colors = np.vstack([self.colors, color_val.reshape(1, 3)])
+        
+        self.semantic_labels = np.append(self.semantic_labels, semantic_label)
+        self.semantic_confidences = np.append(self.semantic_confidences, semantic_confidence)
         
         obs_val = observations if observations is not None else np.zeros((0, 2), dtype=np.int32)
         self.observations.append(obs_val)
@@ -546,12 +580,6 @@ class ImagePair:
 
 
 # ============================================================================
-# Pair ID Utilities
-# ============================================================================
-# Removed: PairId conversion functions - now using (image_id1, image_id2) tuples directly
-
-
-# ============================================================================
 # Camera Models
 # ============================================================================
 
@@ -570,7 +598,7 @@ class CameraModelId(Enum):
     THIN_PRISM_FISHEYE = 10
 
 def get_camera_model_info(model_id):
-    # focal refers to which parameters are focal length, optimize refers to which parameters should be optimized (all except principal point)
+    """Get camera model information including parameter structure."""    
     if model_id == CameraModelId.SIMPLE_PINHOLE:
         return {'name': 'SIMPLE_PINHOLE', 'num_params': 3, 'focal': [0], 'pp': [1, 2], 'k': [], 'p': [], 'omega': [], 'sx': [], 'optimize': [0]}
     elif model_id == CameraModelId.PINHOLE:
@@ -595,7 +623,6 @@ def get_camera_model_info(model_id):
         return {'name': 'THIN_PRISM_FISHEYE', 'num_params': 12, 'focal': [0, 1], 'pp': [2, 3], 'k': [4, 5, 8, 9], 'p': [6, 7], 'omega': [], 'sx': [10, 11], 'optimize': [0, 1, 4, 5, 6, 7, 8, 9, 10, 11]}
     else:
         raise NotImplementedError
-
 
 class CameraView:
     """Lightweight view over Cameras container for backward compatibility."""
@@ -1096,6 +1123,9 @@ class ViewGraph:
     def keep_largest_connected_component(self, images: Images) -> bool:
         """Keep only the largest connected component.
         
+        Each image is evaluated individually. For multi-camera rigs,
+        rig-level filtering should be applied at export time.
+        
         Args:
             images: Either list of Image objects or Images container.
             
@@ -1117,9 +1147,10 @@ class ViewGraph:
 
         largest_component = self.connected_component[max_idx]
         
+        # Always use individual camera registration
+        # Multi-camera rig filtering is handled at export time
         for i in range(len(images)):
-            img = images[i]
-            img.is_registered = img.id in largest_component
+            images.is_registered[i] = i in largest_component
 
         for pair in self.image_pairs.values():
             img1_reg = images[pair.image_id1].is_registered
@@ -1154,3 +1185,131 @@ class ViewGraph:
                 images[image_id].cluster_id = comp
         
         return comp + 1
+
+
+# ============================================================================
+# Semantic Object Management
+# ============================================================================
+
+class Object:
+    """Represents a physical object tracked across multiple images.
+    
+    Each object has a global ID and is associated with different semantic 
+    label IDs in different images (since segmentation is done per-camera).
+    """
+    def __init__(self, object_id: int):
+        self.object_id = object_id  # Global unique object ID
+        
+        # Map from image_id to local semantic label_id in that image
+        # {image_id: label_id}
+        self.image_labels: Dict[int, int] = {}
+        
+        # Statistics for dynamic object detection
+        self.observation_count = 0  # Number of times seen in image pairs
+        self.inlier_ratios: List[float] = []  # RANSAC inlier ratios
+        self.is_dynamic = False  # Whether marked as dynamic
+        
+        # Associated features and tracks
+        self.feature_observations: List[Tuple[int, int]] = []  # [(image_id, feat_idx), ...]
+        self.track_ids: List[int] = []  # IDs of tracks on this object
+    
+    def add_observation(self, image_id: int, label_id: int):
+        """Associate this object with a semantic label in an image."""
+        self.image_labels[image_id] = label_id
+    
+    def get_label_in_image(self, image_id: int) -> Optional[int]:
+        """Get the semantic label ID for this object in a specific image."""
+        return self.image_labels.get(image_id, None)
+    
+    def has_observation_in_image(self, image_id: int) -> bool:
+        """Check if this object is visible in an image."""
+        return image_id in self.image_labels
+    
+    def add_inlier_ratio(self, ratio: float):
+        """Add an inlier ratio observation for dynamic detection."""
+        self.inlier_ratios.append(ratio)
+        self.observation_count += 1
+    
+    def get_inlier_statistics(self) -> Dict:
+        """Get statistics of inlier ratios."""
+        if len(self.inlier_ratios) == 0:
+            return {
+                'count': 0,
+                'mean': 0.0,
+                'median': 0.0,
+                'p25': 0.0,
+                'p75': 0.0
+            }
+        
+        ratios = np.array(self.inlier_ratios)
+        return {
+            'count': len(ratios),
+            'mean': float(np.mean(ratios)),
+            'median': float(np.median(ratios)),
+            'p25': float(np.percentile(ratios, 25)),
+            'p75': float(np.percentile(ratios, 75))
+        }
+
+
+class Objects:
+    """Container for managing all detected objects across images.
+    
+    Handles object tracking across different camera views where semantic
+    segmentation is performed independently per camera.
+    """
+    def __init__(self):
+        self.objects: Dict[int, Object] = {}  # object_id -> Object
+        self.next_object_id = 1
+        
+        # Reverse mapping: (image_id, label_id) -> object_id
+        self.label_to_object: Dict[Tuple[int, int], int] = {}
+        
+        # Static label (background)
+        self.background_label = 0
+    
+    def create_object(self) -> Object:
+        """Create a new object with a unique ID."""
+        obj = Object(self.next_object_id)
+        self.objects[self.next_object_id] = obj
+        self.next_object_id += 1
+        return obj
+    
+    def add_observation(self, object_id: int, image_id: int, label_id: int):
+        """Associate an object with a semantic label in an image."""
+        if object_id not in self.objects:
+            raise ValueError(f"Object {object_id} does not exist")
+        
+        self.objects[object_id].add_observation(image_id, label_id)
+        self.label_to_object[(image_id, label_id)] = object_id
+    
+    def get_object_id(self, image_id: int, label_id: int) -> Optional[int]:
+        """Get the global object ID for a semantic label in an image."""
+        return self.label_to_object.get((image_id, label_id), None)
+    
+    def get_object(self, object_id: int) -> Optional[Object]:
+        """Get an object by its ID."""
+        return self.objects.get(object_id, None)
+    
+    def get_objects_in_image(self, image_id: int) -> List[int]:
+        """Get all object IDs visible in an image."""
+        return [
+            obj_id for obj_id, obj in self.objects.items()
+            if obj.has_observation_in_image(image_id)
+        ]
+    
+    def get_dynamic_objects(self) -> List[int]:
+        """Get IDs of all objects marked as dynamic."""
+        return [obj_id for obj_id, obj in self.objects.items() if obj.is_dynamic]
+    
+    def mark_dynamic(self, object_id: int):
+        """Mark an object as dynamic."""
+        if object_id in self.objects:
+            self.objects[object_id].is_dynamic = True
+    
+    def __len__(self) -> int:
+        """Number of tracked objects."""
+        return len(self.objects)
+    
+    def __contains__(self, object_id: int) -> bool:
+        """Check if an object exists."""
+        return object_id in self.objects
