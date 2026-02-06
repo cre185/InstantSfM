@@ -36,6 +36,7 @@
 **⚠️Please note that this repository is still under active development. We will keep updating it regularly. Feel free to open an issue if you encounter any problem.**
 
 ## News📰  
+- **2026/2/6**: Bumped to version 0.2.0 with tools for depth generation. Detailed information can be found below.  
 - **2025/12/02**: Added a Dockerfile and quick test command to run the bundled `examples/kitchen` dataset.  
 - **2025/11/27**: We changed the data structure into a more SIMD-friendly format, which further speeds up the whole pipeline by around 10%.  
 
@@ -143,7 +144,10 @@ ins-vis --data_path /path/to/folder
 ```
 For a more detailed usage, you can run the command with `--help` to see all available options.  
 
-## 4. Manual configuration   
+## 4. Tools for extra data processing  
+We provide extra tools for data processing based on prevalent models in the `tools/` folder. Please refer to [tools/usage.md](tools/usage.md) for more details. Currently we support Video Depth Anything for metric scale depth estimation from videos. More tools will be added in the future.  
+
+## 5. Manual configuration   
 While the default configuration should work for most cases, you can also try to modify the configuration in the `config/` folder to improve the performance on your own dataset.  
 Want to apply several modifications to config files while keeping the original ones? Add the `--manual_config_name` argument and specify the name of your own config file. For example, if you created a new config file `config/my_config.py`, add `--manual_config_name my_config` to the command line. Please make sure the config file is a valid one, the recommended way is to copy an original config file and modify it.  
 

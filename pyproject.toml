@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "instantsfm"
-version = "0.1.0"
+version = "0.2.0"
 description = "Fast and accurate SfM reconstruction with GPU acceleration"
 readme = "README.md"
 license = "CC-BY-NC-4.0"
@@ -21,7 +21,7 @@ dependencies = [
     "scipy==1.13.0",
     "scikit-sparse==0.4.15",
     "tqdm==4.66.5",
-    "pyceres @ git+https://github.com/cvg/pyceres.git@v2.6",
+    "pyceres==2.3",
     "kornia==0.8.0",
     "viser==0.2.11",
     "imageio-ffmpeg",
@@ -34,8 +34,10 @@ dependencies = [
     "plotly",
     "splines",
     "jaxtyping",
+    "triton",
     "gsplat",
     "pypose @ git+https://github.com/pypose/pypose.git@bae",
+    "fused-ssim @ git+https://github.com/rahul-goel/fused-ssim",
 ]
 
 # [project.urls]
