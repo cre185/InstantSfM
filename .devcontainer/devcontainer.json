@@ -9,34 +9,20 @@
     // },
 
 	"runArgs": [
+		"--user=0:0",
 		"--gpus=all",
-		"--ipc=host",
-		"--ulimit",
-		"memlock=-1",
-		"--ulimit",
-		"stack=67108864",
-		"--shm-size=12gb"
+		"--ipc=host"
 	],
 
 	"features": {
-		"ghcr.io/devcontainers/features/common-utils:2": {
-			"username": "user",
-			"userUid": "automatic",
-			"userGid": "automatic",
-			"installZsh": "false",
-			"installOhMyZsh": "false",
-			"upgradePackages": true
-		}
+		"ghcr.io/jsburckhardt/devcontainer-features/codex:1": {}
 	},
 
-	"remoteUser": "user",
 	"mounts": [
-		"source=${localEnv:USERPROFILE}/.cache,target=/home/user/.cache,type=bind,consistency=cached",
-		"source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+		"source=${localEnv:HOME}/.cache,target=/root/.cache,type=bind,consistency=cached",
+		"source=${localEnv:HOME}/.codex,target=/root/.codex,type=bind",
 	],
 	
-	"workspaceFolder": "/workspace",
-
 	"customizations": {
 		"vscode": {
 			"extensions": [
