@@ -138,14 +138,12 @@ class DatasetIMC2023(_DatasetIMC):
         categories: list[str],
         scenes: list[Path],
         run_path: Path,
-        run_name: str,
     ):
         super().__init__(
             data_path=data_path,
             categories=categories,
             scenes=scenes,
             run_path=run_path,
-            run_name=run_name,
             year=2023,
         )
 
@@ -157,13 +155,11 @@ class DatasetIMC2024(_DatasetIMC):
         categories: list[str],
         scenes: list[Path],
         run_path: Path,
-        run_name: str,
     ):
         super().__init__(
             data_path=data_path,
             categories=categories,
             scenes=scenes,
             run_path=run_path,
-            run_name=run_name,
             year=2024,
         )

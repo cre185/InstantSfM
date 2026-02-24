@@ -147,7 +147,25 @@ For a more detailed usage, you can run the command with `--help` to see all avai
 ## 4. Tools for extra data processing  
 We provide extra tools for data processing based on prevalent models in the `tools/` folder. Please refer to [tools/usage.md](tools/usage.md) for more details. Currently we support Video Depth Anything for metric scale depth estimation from videos. More tools will be added in the future.  
 
-## 5. Manual configuration   
+## 5. Evaluating Camera Pose Accuracy  
+We provide an evaluation module in `instantsfm/eval/colmap_eval/` to measure camera pose accuracy (AUC) against ground-truth and reproduce the experiment results in the paper. The following datasets are currently supported: ETH3D, Tanks and Temples, DTU, BlendedMVS, IMC2023, and IMC2024.  
+
+To set up and run evaluation, first install the evaluation dependencies:  
+```bash
+conda create -n eval python=3.12
+conda activate eval
+pip install -r instantsfm/eval/colmap_eval/requirements.txt
+```
+Then run the SfM pipeline on your chosen dataset(s) and place the reconstruction results (COLMAP `sparse/` format) under the corresponding dataset directories. For detailed directory structure requirements and full usage instructions, please refer to [instantsfm/eval/colmap_eval/README.md](instantsfm/eval/colmap_eval/README.md).  
+
+Once your data is ready, run the evaluation from the `instantsfm/eval/colmap_eval/` directory:  
+```bash
+cd instantsfm/eval/colmap_eval
+python evaluate.py --data_path /path/to/dataset --datasets eth3d tt dtu
+```
+The results are reported as AUC scores at multiple error thresholds and saved as a CSV file.  
+
+## 6. Manual configuration   
 While the default configuration should work for most cases, you can also try to modify the configuration in the `config/` folder to improve the performance on your own dataset.  
 Want to apply several modifications to config files while keeping the original ones? Add the `--manual_config_name` argument and specify the name of your own config file. For example, if you created a new config file `config/my_config.py`, add `--manual_config_name my_config` to the command line. Please make sure the config file is a valid one, the recommended way is to copy an original config file and modify it.  
 
