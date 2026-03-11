@@ -8,7 +8,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake ninja-build git wget ca-certificates xz-utils \
     libgoogle-glog-dev libgflags-dev libatlas-base-dev libeigen3-dev \
     libsuitesparse-dev libmetis-dev liblapack-dev libblas-dev \
-    libgl1 libglib2.0-0 colmap \
+    libboost-filesystem-dev libboost-graph-dev libboost-program-options-dev \
+    libboost-system-dev libfreeimage-dev libflann-dev liblz4-dev \
+    libopenimageio-dev openimageio-tools libopencv-dev libsqlite3-dev libcgal-dev libglew-dev libgl1 libgl1-mesa-dev libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install cuDSS for CUDA 13 (arch-aware)
@@ -44,7 +46,7 @@ ENV TORCH_CUDA_ARCH_LIST="8.0;9.0;8.6;8.9;11.0"
 # Build and install Ceres Solver (needed by pyceres)
 ARG CERES_VERSION=2.1.0
 RUN wget -q http://ceres-solver.org/ceres-solver-${CERES_VERSION}.tar.gz \
-    && tar zxf ceres-solver-${CERES_VERSION}.tar.gz \
+    && tar --no-same-owner -zxf ceres-solver-${CERES_VERSION}.tar.gz \
     && mkdir ceres-build \
     && cd ceres-build \
     && cmake ../ceres-solver-${CERES_VERSION} -GNinja \
@@ -54,12 +56,27 @@ RUN wget -q http://ceres-solver.org/ceres-solver-${CERES_VERSION}.tar.gz \
     && cd / \
     && rm -rf ceres-build ceres-solver-${CERES_VERSION} ceres-solver-${CERES_VERSION}.tar.gz
 
+# Build and install COLMAP from source instead of using the distro package.
+ARG COLMAP_VERSION=main
+ARG COLMAP_CUDA_ARCHITECTURES=80;86;89;90;110
+RUN git clone --branch ${COLMAP_VERSION} --depth 1 https://github.com/colmap/colmap.git /tmp/colmap \
+    && cmake -S /tmp/colmap -B /tmp/colmap/build -GNinja \
+         -DCMAKE_BUILD_TYPE=Release \
+         "-DCMAKE_CUDA_ARCHITECTURES=${COLMAP_CUDA_ARCHITECTURES}" \
+         -DGUI_ENABLED=OFF \
+         -DOPENGL_ENABLED=OFF \
+    && cmake --build /tmp/colmap/build \
+    && cmake --install /tmp/colmap/build \
+    && ldconfig \
+    && colmap help >/dev/null \
+    && rm -rf /tmp/colmap
+
 WORKDIR /workspace/InstantSfM
 
 # Install Python deps separately so code edits don't bust the cache.
 COPY pyproject.toml README.md ./
 RUN set -euo pipefail \
-    && python -c "import tomllib, pathlib; py=tomllib.loads(pathlib.Path('pyproject.toml').read_text()); reqs=py['project']['dependencies']; pathlib.Path('/tmp/requirements.txt').write_text('\\n'.join(reqs) + '\\n')" \
+    && python -c "import tomllib, pathlib; py=tomllib.loads(pathlib.Path('pyproject.toml').read_text()); reqs=[r for r in py['project']['dependencies'] if not r.startswith('fused-ssim @ ')]; pathlib.Path('/tmp/requirements.txt').write_text('\\n'.join(reqs) + '\\n')" \
     && pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r /tmp/requirements.txt \
     && git clone --depth=1 https://github.com/rahul-goel/fused-ssim /tmp/fused-ssim \

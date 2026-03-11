@@ -188,3 +188,7 @@ test
 tmp/*
 demo_tmp/
 external/*
+database.db
+image_sets/*
+scannetpp_colmap/*
+tankstemple/*
