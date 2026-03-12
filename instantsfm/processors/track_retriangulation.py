@@ -6,7 +6,7 @@ from instantsfm.processors.track_filter import FilterTracksByReprojection, Filte
 from instantsfm.processors.bundle_adjustment import TorchBA
 from instantsfm.utils.union_find import UnionFind
 from instantsfm.scene.defs import CameraModelId, get_camera_model_info
-from instantsfm.utils.cost_function import reproject_funcs
+from instantsfm.utils.cost_function import reproject_funcs_no_depth
 
 import torch
 from bae.utils.ba import rotate_quat
@@ -34,7 +34,7 @@ def complete_tracks(cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS):
     camera_model = cameras[0].model_id # Assume all cameras have the same model
     camera_model_info = get_camera_model_info(camera_model)
     try:
-        cost_fn = reproject_funcs[camera_model.value]
+        cost_fn = reproject_funcs_no_depth[camera_model.value]
     except:
         raise NotImplementedError("Unsupported camera model")
 
@@ -42,8 +42,7 @@ def complete_tracks(cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS):
     candidate_track_indices     = []  # shape: [B] which row in pairwise_module.points_3d
     candidate_obs_info          = []  # shape: [B, 2] (image_id, feature_id) corresponding to observed_feature
 
-    track_id2idx = {track_id: idx for idx, track_id in enumerate(tracks.keys())}
-    track_idx2id = {idx: track_id for idx, track_id in enumerate(tracks.keys())}
+    track_id2idx = {int(track_id): idx for idx, track_id in enumerate(tracks.ids)}
 
     for track_id, track_obs in tracks_orig.items():
         if track_id not in track_id2idx:
@@ -52,6 +51,9 @@ def complete_tracks(cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS):
         candidate_observed_features.extend([images[img_id].features[feat_id] for img_id, feat_id in track_obs])
         candidate_track_indices.extend([track_id2idx[track_id] for _ in range(len(track_obs))])
         candidate_obs_info.extend(track_obs)
+
+    if not candidate_observed_features:
+        return 0
 
     # Convert to torch tensors
     observed_features_tensor = torch.tensor(np.array(candidate_observed_features), dtype=torch.float64, device=device) # [n, 2]
@@ -83,16 +85,21 @@ def complete_tracks(cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS):
     remaining_indices = torch.tensor([i for i in all_indices if i not in pp_indices], device=device)
     camera_params = camera_params[..., remaining_indices]
 
-    points_proj = rotate_quat(points_3d, camera_params[..., :7])
+    camera_extrinsics = camera_params[..., :7]
+    camera_intrinsics = camera_params[..., 7:]
+
+    points_proj = rotate_quat(points_3d, camera_extrinsics)
     valid_mask = points_proj[..., 2] > EPSILON # filter out points behind the camera
 
-    errors = cost_fn(points_3d, camera_params, camera_pps)
+    errors = cost_fn(points_3d, camera_extrinsics, camera_intrinsics, camera_pps)
     errors -= observed_features_tensor
     errors = torch.norm(errors, dim=-1)
 
     # Filter results by threshold
     passing_mask = (errors <= reproj_threshold)
     passing_mask = passing_mask & valid_mask
+    if not torch.any(passing_mask):
+        return 0
     obs_info = obs_info_tensor[passing_mask].detach().cpu().numpy()
     point_indices_tensor = point_indices_tensor[passing_mask]
 
@@ -105,10 +112,10 @@ def complete_tracks(cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS):
     num_completed = 0
     for i in range(len(split_indices) - 1):
         track_idx = point_indices_tensor[split_indices[i]].item()
-        track_id = track_idx2id[track_idx]
-        track = tracks[track_id]
-        num_completed += abs((split_indices[i+1] - split_indices[i]) - tracks.observations[i].shape[0])
-        tracks.observations[i] = obs_info[split_indices[i]:split_indices[i+1]]
+        old_num_obs = tracks.observations[track_idx].shape[0]
+        new_obs = obs_info[split_indices[i]:split_indices[i+1]]
+        num_completed += abs((split_indices[i+1] - split_indices[i]) - old_num_obs)
+        tracks.observations[track_idx] = new_obs
 
     return num_completed
 
