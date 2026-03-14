@@ -139,9 +139,9 @@ def ReadColmapDatabase(path):
             invalid_count += 1
             continue
 
-        F = blob_to_array(F_blob, np.float64).reshape(3, 3)
-        E = blob_to_array(E_blob, np.float64).reshape(3, 3)
-        H = blob_to_array(H_blob, np.float64).reshape(3, 3)
+        F = blob_to_array(F_blob, np.float64).reshape(3, 3) if F_blob is not None else None
+        E = blob_to_array(E_blob, np.float64).reshape(3, 3) if E_blob is not None else None
+        H = blob_to_array(H_blob, np.float64).reshape(3, 3) if H_blob is not None else None
         image_pairs[pair_key].F = F
         image_pairs[pair_key].E = E
         image_pairs[pair_key].H = H
