@@ -422,7 +422,6 @@ def RetriangulateTracks(view_graph, cameras, images, tracks, tracks_orig, TRIANG
         print(f'Running bundle adjustment iteration {i+1} / {TRIANGULATOR_OPTIONS["ba_global_max_refinements"]}') 
         num_observations_before = count_observations(tracks)
         ba_engine = TorchBA()
-        ba_engine.Solve(cameras, images, tracks, BUNDLE_ADJUSTER_OPTIONS, fix_rotation=True)
         ba_engine.Solve(cameras, images, tracks, BUNDLE_ADJUSTER_OPTIONS)
         num_changed_observations = 0
         num_changed_observations += abs(complete_and_merge_tracks(cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS))
