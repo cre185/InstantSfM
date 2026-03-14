@@ -19,6 +19,9 @@ from bae.autograd.function import TrackingTensor
 def SolveViewGraphCalibration(view_graph:ViewGraph, cameras, images, VIEW_GRAPH_CALIBRATOR_OPTIONS):
     valid_image_pairs = {pair_id: image_pair for pair_id, image_pair in view_graph.image_pairs.items()
                          if image_pair.is_valid and image_pair.config in [ConfigurationType.CALIBRATED, ConfigurationType.UNCALIBRATED]}
+    if len(valid_image_pairs) == 0:
+        print('No valid image pairs for view graph calibration; skipping.')
+        return
     focals = np.array([np.mean(cam.focal_length) for cam in cameras])
 
     problem = pyceres.Problem()
@@ -29,6 +32,7 @@ def SolveViewGraphCalibration(view_graph:ViewGraph, cameras, images, VIEW_GRAPH_
     else:
         options.linear_solver_type = pyceres.LinearSolverType.SPARSE_NORMAL_CHOLESKY
     
+    bounded_cam_ids = set()
     for image_pair in valid_image_pairs.values():
         image1, image2 = images[image_pair.image_id1], images[image_pair.image_id2]
         cam1, cam2 = cameras[image1.cam_id], cameras[image2.cam_id]
@@ -39,7 +43,12 @@ def SolveViewGraphCalibration(view_graph:ViewGraph, cameras, images, VIEW_GRAPH_
         else:
             cost_function = FetzerFocalLengthCostFunction(image_pair.F, cam1.principal_point, cam2.principal_point)
             problem.add_residual_block(cost_function, loss_function, [focals[cam_id1:cam_id1+1], focals[cam_id2:cam_id2+1]])
-    problem.set_parameter_lower_bound(focals, 0, 1e-3)
+        if cam_id1 not in bounded_cam_ids:
+            problem.set_parameter_lower_bound(focals[cam_id1:cam_id1+1], 0, 1e-3)
+            bounded_cam_ids.add(cam_id1)
+        if cam_id2 not in bounded_cam_ids:
+            problem.set_parameter_lower_bound(focals[cam_id2:cam_id2+1], 0, 1e-3)
+            bounded_cam_ids.add(cam_id2)
 
     options.max_num_iterations = VIEW_GRAPH_CALIBRATOR_OPTIONS['max_num_iterations']
     options.function_tolerance = VIEW_GRAPH_CALIBRATOR_OPTIONS['function_tolerance']
