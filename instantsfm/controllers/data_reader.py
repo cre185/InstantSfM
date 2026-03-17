@@ -105,7 +105,7 @@ def ReadColmapDatabase(path):
         images_dict[image_id]['features'] = data[:, :2]
 
     query = """
-    SELECT m.pair_id, m.data, t.config, t.F, t.E, t.H
+    SELECT m.pair_id, m.data, t.data, t.config, t.F, t.E, t.H
     FROM matches AS m
     INNER JOIN two_view_geometries AS t ON m.pair_id = t.pair_id
     """
@@ -114,11 +114,14 @@ def ReadColmapDatabase(path):
     invalid_count = 0
 
     for group in matches_and_geometries:
-        pair_id, data, config, F_blob, E_blob, H_blob = group
+        pair_id, raw_data_blob, verified_data_blob, config, F_blob, E_blob, H_blob = group
+        raw_data = None if raw_data_blob is None else blob_to_array(raw_data_blob, np.uint32, (-1, 2))
+        verified_data = None if verified_data_blob is None else blob_to_array(verified_data_blob, np.uint32, (-1, 2))
+        # Prefer geometrically verified correspondences when they have enough support.
+        data = verified_data if verified_data is not None and verified_data.shape[0] >= 30 else raw_data
         if data is None:
             invalid_count += 1
             continue
-        data = blob_to_array(data, np.uint32, (-1, 2))
         # Convert COLMAP pair_id to image IDs
         image_id2 = pair_id % 2147483647
         image_id1 = (pair_id - image_id2) // 2147483647
