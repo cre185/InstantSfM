@@ -543,9 +543,11 @@ pair_correspondence_source = sys.argv[2]
 skip_view_graph_calibration = sys.argv[3] == "1"
 enable_retriangulation = sys.argv[4] == "1"
 seed_arg = sys.argv[5]
+sparse_name = sys.argv[6]
 seed = None if seed_arg == "none" else int(seed_arg)
 
 path_info = ReadData(str(data_path))
+path_info.output_path = str(data_path / sparse_name)
 if pair_correspondence_source != "matches":
     raise ValueError(f"Unsupported pair_correspondence_source for current InstantSfM tree: {pair_correspondence_source}")
 view_graph, cameras, images, feature_name, multi_camera_rig = ReadColmapDatabase(
@@ -591,6 +593,7 @@ print("Reconstruction written to", path_info.output_path)
         "1" if skip_view_graph_calibration else "0",
         "1" if enable_retriangulation else "0",
         "none" if seed is None else str(seed),
+        sparse_name,
     ]
 
     env = os.environ.copy()
