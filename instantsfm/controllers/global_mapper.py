@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import random
 
 from instantsfm.scene.defs import ViewGraph
 from instantsfm.controllers.config import Config
@@ -22,6 +23,18 @@ from instantsfm.scene.rig_utils import Single2Rig, Rig2Single
 
 
 def SolveGlobalMapper(view_graph:ViewGraph, cameras, images, config:Config, visualizer=None):
+    seed = config.RUNTIME_OPTIONS.get('random_seed', None)
+    if seed is not None:
+        np.random.seed(seed)
+        random.seed(seed)
+        try:
+            import torch
+            torch.manual_seed(seed)
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed_all(seed)
+        except ImportError:
+            pass
+
     # Global objects for cross-camera analysis (initialized after tracks)
     global_objects = None
     
