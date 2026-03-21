@@ -157,12 +157,13 @@ Want to apply several modifications to config files while keeping the original o
 ## Citation
 If you find our code or paper useful, please consider citing:
 ```
-@article{zhong2025instantsfm,
-  title = {InstantSfM: Fully Sparse and Parallel Structure-from-Motion},
-  author={Jiankun Zhong and Zitong Zhan and Quankai Gao and Ziyu Chen and Haozhe Lou and Jiageng Mao and Ulrich Neumann and Yue Wang},
+@article{zhong2026instantsfm,
+  title = {InstantSfM: Towards GPU-Native SfM for the Deep Learning Era},
+  author = {Zhong, Jiankun and Zhan, Zitong and Gao, Quankai and Chen, Ziyu and Lou, Haozhe and Mao, Jiageng and Neumann, Ulrich and Wang, Chen and Wang, Yue},
   journal = {arXiv preprint arXiv:2510.13310},
-  year = {2025},
-  url = {https://arxiv.org/abs/2510.13310}
+  year = {2026},
+  url = {https://arxiv.org/abs/2510.13310},
+  code = {https://github.com/cre185/InstantSfM}
 }
 ```
 and
