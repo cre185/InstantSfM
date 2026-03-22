@@ -35,6 +35,31 @@
 
 **⚠️Please note that this repository is still under active development. We will keep updating it regularly. Feel free to open an issue if you encounter any problem.**
 
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <p align="center" width="100%">
+        <img src="https://github.com/sair-lab/bae/blob/gh-page/docs/assets/garden_half.gif?raw=true" alt="Garden bundle adjustment example" width="100%" />
+      </p>
+    </td>
+    <td align="center" width="33%">
+      <p align="center" width="100%">
+        <img src="https://github.com/sair-lab/bae/blob/gh-page/docs/assets/counter_half.gif?raw=true" alt="Counter bundle adjustment example" width="100%" />
+      </p>
+    </td>
+    <td align="center" width="33%">
+      <p align="center" width="100%">
+        <img src="https://github.com/sair-lab/bae/blob/gh-page/docs/assets/kitchen_half.gif?raw=true" alt="Kitchen bundle adjustment example" width="100%" />
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">Garden</td>
+    <td align="center">Counter</td>
+    <td align="center">Kitchen</td>
+  </tr>
+</table>
+
 ## News📰  
 - **2026/2/6**: Bumped to version 0.2.0 with tools for depth generation. Detailed information can be found below.  
 - **2025/12/02**: Added a Dockerfile and quick test command to run the bundled `examples/kitchen` dataset.  
