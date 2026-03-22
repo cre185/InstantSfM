@@ -2,17 +2,18 @@
 
 <div align="center">
 
-# InstantSfM: Fully Sparse and Parallel Structure-from-Motion
+# InstantSfM: Towards GPU-Native SfM for the Deep Learning Era
 
 
 <p align="center">  
     <a href="https://github.com/cre185/">Jiankun Zhong</a><sup>1,3*</sup>,
-    <a href="https://sairlab.org/zitongz/">Zitong Zhan</a><sup>2*</sup>,
+    <a href="https://github.com/zitongzhan">Zitong Zhan</a><sup>2*</sup>,
     <a href="https://zerg-overmind.github.io/">Quankai Gao</a><sup>1*</sup>,
     <a href="https://ziyc.github.io/">Ziyu Chen</a><sup>1</sup>,
     <a href="https://scholar.google.com/citations?user=BIPK9KEAAAAJ&hl=zh-TW">Haozhe Lou</a><sup>1</sup>,
     <a href="https://pointscoder.github.io/">Jiageng Mao</a><sup>1</sup>,
     <a href="https://scholar.google.com/citations?user=MHet2VoAAAAJ&hl=en">Ulrich Neumann</a><sup>1</sup>,
+    <a href="https://sairlab.org">Chen Wang</a><sup>2</sup>,
     <a href="https://yuewang.xyz/">Yue Wang</a><sup>1</sup>
     <br>
     <sup>1</sup>University of Southern California <sup>2</sup>University at Buffalo <sup>3</sup>Tsinghua University
