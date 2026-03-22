@@ -1,22 +1,27 @@
-<img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/USC-Logos.png?raw=true" width=120px /><img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/University_at_Buffalo_logo.png?raw=true" width=120px /><img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/Tsinghua_University_Logo.png?raw=true" width=50px />
-
 <div align="center">
 
-# InstantSfM: Fully Sparse and Parallel Structure-from-Motion
+# InstantSfM
+
+#### Towards GPU-Native SfM for the Deep Learning Era
 
 
 <p align="center">  
     <a href="https://github.com/cre185/">Jiankun Zhong</a><sup>1,3*</sup>,
-    <a href="https://sairlab.org/zitongz/">Zitong Zhan</a><sup>2*</sup>,
+    <a href="https://github.com/zitongzhan">Zitong Zhan</a><sup>2*</sup>,
     <a href="https://zerg-overmind.github.io/">Quankai Gao</a><sup>1*</sup>,
     <a href="https://ziyc.github.io/">Ziyu Chen</a><sup>1</sup>,
     <a href="https://scholar.google.com/citations?user=BIPK9KEAAAAJ&hl=zh-TW">Haozhe Lou</a><sup>1</sup>,
     <a href="https://pointscoder.github.io/">Jiageng Mao</a><sup>1</sup>,
     <a href="https://scholar.google.com/citations?user=MHet2VoAAAAJ&hl=en">Ulrich Neumann</a><sup>1</sup>,
+    <a href="https://sairlab.org">Chen Wang</a><sup>2</sup>,
     <a href="https://yuewang.xyz/">Yue Wang</a><sup>1</sup>
     <br>
     <sup>1</sup>University of Southern California <sup>2</sup>University at Buffalo <sup>3</sup>Tsinghua University
 </p>
+
+<img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/USC-Logos.png?raw=true" width=72px style="margin: 0 18px;" />
+<img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/University_at_Buffalo_logo.png?raw=true" width=72px style="margin: 0 18px;" />
+<img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/Tsinghua_University_Logo.png?raw=true" width=30px style="margin: 0 18px;" />
 
 </div>
 
@@ -34,6 +39,31 @@
 
 
 **⚠️Please note that this repository is still under active development. We will keep updating it regularly. Feel free to open an issue if you encounter any problem.**
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <p align="center" width="100%">
+        <img src="https://github.com/sair-lab/bae/blob/gh-page/docs/assets/garden_half.gif?raw=true" alt="Garden bundle adjustment example" width="100%" />
+      </p>
+    </td>
+    <td align="center" width="33%">
+      <p align="center" width="100%">
+        <img src="https://github.com/sair-lab/bae/blob/gh-page/docs/assets/counter_half.gif?raw=true" alt="Counter bundle adjustment example" width="100%" />
+      </p>
+    </td>
+    <td align="center" width="33%">
+      <p align="center" width="100%">
+        <img src="https://github.com/sair-lab/bae/blob/gh-page/docs/assets/kitchen_half.gif?raw=true" alt="Kitchen bundle adjustment example" width="100%" />
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">Garden</td>
+    <td align="center">Counter</td>
+    <td align="center">Kitchen</td>
+  </tr>
+</table>
 
 ## News📰  
 - **2026/2/6**: Bumped to version 0.2.0 with tools for depth generation. Detailed information can be found below.  
@@ -157,12 +187,13 @@ Want to apply several modifications to config files while keeping the original o
 ## Citation
 If you find our code or paper useful, please consider citing:
 ```
-@article{zhong2025instantsfm,
-  title = {InstantSfM: Fully Sparse and Parallel Structure-from-Motion},
-  author={Jiankun Zhong and Zitong Zhan and Quankai Gao and Ziyu Chen and Haozhe Lou and Jiageng Mao and Ulrich Neumann and Yue Wang},
+@article{zhong2026instantsfm,
+  title = {InstantSfM: Towards GPU-Native SfM for the Deep Learning Era},
+  author = {Zhong, Jiankun and Zhan, Zitong and Gao, Quankai and Chen, Ziyu and Lou, Haozhe and Mao, Jiageng and Neumann, Ulrich and Wang, Chen and Wang, Yue},
   journal = {arXiv preprint arXiv:2510.13310},
-  year = {2025},
-  url = {https://arxiv.org/abs/2510.13310}
+  year = {2026},
+  url = {https://arxiv.org/abs/2510.13310},
+  code = {https://github.com/cre185/InstantSfM}
 }
 ```
 and
