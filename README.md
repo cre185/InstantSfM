@@ -1,8 +1,8 @@
-<img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/USC-Logos.png?raw=true" width=120px /><img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/University_at_Buffalo_logo.png?raw=true" width=120px /><img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/Tsinghua_University_Logo.png?raw=true" width=50px />
-
 <div align="center">
 
-# InstantSfM: Towards GPU-Native SfM for the Deep Learning Era
+# InstantSfM
+
+#### Towards GPU-Native SfM for the Deep Learning Era
 
 
 <p align="center">  
@@ -18,6 +18,10 @@
     <br>
     <sup>1</sup>University of Southern California <sup>2</sup>University at Buffalo <sup>3</sup>Tsinghua University
 </p>
+
+<img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/USC-Logos.png?raw=true" width=72px style="margin: 0 18px;" />
+<img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/University_at_Buffalo_logo.png?raw=true" width=72px style="margin: 0 18px;" />
+<img src="https://github.com/cre185/InstantSfM/blob/gh-pages/static/images/Tsinghua_University_Logo.png?raw=true" width=30px style="margin: 0 18px;" />
 
 </div>
 
