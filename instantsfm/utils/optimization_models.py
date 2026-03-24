@@ -29,6 +29,14 @@ def calc_trans(ref_R, ref_t, rel_R, rel_t):
     return pose_trans
 
 
+def _set_intrinsics_param(module, attr_name, camera_intrs, optimize_intrinsics):
+    intrinsics = TrackingTensor(camera_intrs)
+    if optimize_intrinsics:
+        module.register_parameter(attr_name, nn.Parameter(intrinsics))
+    else:
+        module.register_buffer(attr_name, intrinsics)
+
+
 class ReprojectionModel(nn.Module):
     """
     Single-camera bundle adjustment model.
@@ -36,7 +44,7 @@ class ReprojectionModel(nn.Module):
     
     Similar to bae.ba_helpers.Reproj but adapted for instantsfm's camera models.
     """
-    def __init__(self, image_extrs, camera_intrs, points_3d, cost_fn):
+    def __init__(self, image_extrs, camera_intrs, points_3d, cost_fn, optimize_intrinsics=True):
         """
         Args:
             image_extrs: [num_imgs, 7] SE3 poses as quaternion + translation
@@ -47,7 +55,7 @@ class ReprojectionModel(nn.Module):
         """
         super().__init__()
         self.extrinsics = nn.Parameter(TrackingTensor(image_extrs))
-        self.intrinsics = nn.Parameter(TrackingTensor(camera_intrs))
+        _set_intrinsics_param(self, "intrinsics", camera_intrs, optimize_intrinsics)
         self.points_3d = nn.Parameter(TrackingTensor(points_3d))
         self.extrinsics.trim_SE3_grad = True
         self.cost_fn = cost_fn
@@ -83,7 +91,15 @@ class ReprojectionModelWithDepth(nn.Module):
     Optimizes camera extrinsics, intrinsics, and 3D points to minimize 
     reprojection error and depth error.
     """
-    def __init__(self, image_extrs, camera_intrs, points_3d, cost_fn, depth_weight):
+    def __init__(
+        self,
+        image_extrs,
+        camera_intrs,
+        points_3d,
+        cost_fn,
+        depth_weight,
+        optimize_intrinsics=True,
+    ):
         """
         Args:
             image_extrs: [num_imgs, 7] SE3 poses as quaternion + translation
@@ -95,7 +111,7 @@ class ReprojectionModelWithDepth(nn.Module):
         """
         super().__init__()
         self.extrinsics = nn.Parameter(TrackingTensor(image_extrs))
-        self.intrinsics = nn.Parameter(TrackingTensor(camera_intrs))
+        _set_intrinsics_param(self, "intrinsics", camera_intrs, optimize_intrinsics)
         self.points_3d = nn.Parameter(TrackingTensor(points_3d))
         self.extrinsics.trim_SE3_grad = True
         self.cost_fn = cost_fn
@@ -141,7 +157,7 @@ class ReprojectionMultiRigModel(nn.Module):
     Multi-camera rig bundle adjustment model.
     Uses reference + relative poses for camera rigs.
     """
-    def __init__(self, camera_intrs, points_3d, ref_poses, rel_poses, cost_fn):
+    def __init__(self, camera_intrs, points_3d, ref_poses, rel_poses, cost_fn, optimize_intrinsics=True):
         """
         Args:
             camera_intrs: [num_cams, x] intrinsic parameters (excluding principal point)
@@ -153,7 +169,7 @@ class ReprojectionMultiRigModel(nn.Module):
             optimize_rel_poses: whether to optimize relative poses (False for fixed rig)
         """
         super().__init__()
-        self.intrs = nn.Parameter(TrackingTensor(camera_intrs))
+        _set_intrinsics_param(self, "intrs", camera_intrs, optimize_intrinsics)
         self.points_3d = nn.Parameter(TrackingTensor(points_3d))
         self.ref_poses = nn.Parameter(TrackingTensor(ref_poses))
         self.rel_poses = nn.Parameter(TrackingTensor(rel_poses))
@@ -195,7 +211,16 @@ class ReprojectionMultiRigModelWithDepth(nn.Module):
     Multi-camera rig bundle adjustment model with depth constraint.
     Uses reference + relative poses for camera rigs.
     """
-    def __init__(self, camera_intrs, points_3d, ref_poses, rel_poses, cost_fn, depth_weight):
+    def __init__(
+        self,
+        camera_intrs,
+        points_3d,
+        ref_poses,
+        rel_poses,
+        cost_fn,
+        depth_weight,
+        optimize_intrinsics=True,
+    ):
         """
         Args:
             camera_intrs: [num_cams, x] intrinsic parameters (excluding principal point)
@@ -208,7 +233,7 @@ class ReprojectionMultiRigModelWithDepth(nn.Module):
             optimize_rel_poses: whether to optimize relative poses (False for fixed rig)
         """
         super().__init__()
-        self.intrs = nn.Parameter(TrackingTensor(camera_intrs))
+        _set_intrinsics_param(self, "intrs", camera_intrs, optimize_intrinsics)
         self.points_3d = nn.Parameter(TrackingTensor(points_3d))
         self.ref_poses = nn.Parameter(TrackingTensor(pp.SE3(ref_poses)))
         self.rel_poses = nn.Parameter(TrackingTensor(pp.SE3(rel_poses)))
@@ -261,7 +286,7 @@ class ReprojectionMultiRigModelFixedRel(nn.Module):
     Multi-camera rig bundle adjustment model with FIXED relative poses.
     Only optimizes reference poses, not relative poses (for known rig geometry).
     """
-    def __init__(self, camera_intrs, points_3d, ref_poses, cost_fn):
+    def __init__(self, camera_intrs, points_3d, ref_poses, cost_fn, optimize_intrinsics=True):
         """
         Args:
             camera_intrs: [num_cams, x] intrinsic parameters (excluding principal point)
@@ -272,7 +297,7 @@ class ReprojectionMultiRigModelFixedRel(nn.Module):
         Note: rel_poses are passed via forward() as fixed input
         """
         super().__init__()
-        self.intrs = nn.Parameter(TrackingTensor(camera_intrs))
+        _set_intrinsics_param(self, "intrs", camera_intrs, optimize_intrinsics)
         self.points_3d = nn.Parameter(TrackingTensor(points_3d))
         self.ref_poses = nn.Parameter(TrackingTensor(ref_poses))
         self.ref_poses.trim_SE3_grad = True
@@ -313,7 +338,15 @@ class ReprojectionMultiRigModelWithDepthFixedRel(nn.Module):
     Multi-camera rig bundle adjustment model with depth constraint and FIXED relative poses.
     Only optimizes reference poses, not relative poses (for known rig geometry).
     """
-    def __init__(self, camera_intrs, points_3d, ref_poses, cost_fn, depth_weight):
+    def __init__(
+        self,
+        camera_intrs,
+        points_3d,
+        ref_poses,
+        cost_fn,
+        depth_weight,
+        optimize_intrinsics=True,
+    ):
         """
         Args:
             camera_intrs: [num_cams, x] intrinsic parameters (excluding principal point)
@@ -325,7 +358,7 @@ class ReprojectionMultiRigModelWithDepthFixedRel(nn.Module):
         Note: rel_poses are passed via forward() as fixed input
         """
         super().__init__()
-        self.intrs = nn.Parameter(TrackingTensor(camera_intrs))
+        _set_intrinsics_param(self, "intrs", camera_intrs, optimize_intrinsics)
         self.points_3d = nn.Parameter(TrackingTensor(points_3d))
         self.ref_poses = nn.Parameter(TrackingTensor(pp.SE3(ref_poses)))
         self.ref_poses.trim_SE3_grad = True

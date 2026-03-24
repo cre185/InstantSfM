@@ -246,13 +246,38 @@ class TorchBA():
         self.device = device
         self.visualizer = visualizer
 
-    def Solve(self, cameras, images, tracks, BUNDLE_ADJUSTER_OPTIONS, use_depths=False, is_multi=False, use_fixed_rel_poses=False):
+    def Solve(
+        self,
+        cameras,
+        images,
+        tracks,
+        BUNDLE_ADJUSTER_OPTIONS,
+        use_depths=False,
+        is_multi=False,
+        use_fixed_rel_poses=False,
+        optimize_intrinsics=True,
+    ):
         if is_multi:
-            self.SolveMulti(cameras, images, tracks, BUNDLE_ADJUSTER_OPTIONS, use_depths=use_depths, use_fixed_rel_poses=use_fixed_rel_poses)
+            self.SolveMulti(
+                cameras,
+                images,
+                tracks,
+                BUNDLE_ADJUSTER_OPTIONS,
+                use_depths=use_depths,
+                use_fixed_rel_poses=use_fixed_rel_poses,
+                optimize_intrinsics=optimize_intrinsics,
+            )
         else:
-            self.SolveSingle(cameras, images, tracks, BUNDLE_ADJUSTER_OPTIONS, use_depths=use_depths)
+            self.SolveSingle(
+                cameras,
+                images,
+                tracks,
+                BUNDLE_ADJUSTER_OPTIONS,
+                use_depths=use_depths,
+                optimize_intrinsics=optimize_intrinsics,
+            )
     
-    def SolveSingle(self, cameras, images, tracks, BUNDLE_ADJUSTER_OPTIONS, use_depths=False):
+    def SolveSingle(self, cameras, images, tracks, BUNDLE_ADJUSTER_OPTIONS, use_depths=False, optimize_intrinsics=True):
         self.camera_model = cameras[0].model_id
         self.camera_model_info = get_camera_model_info(self.camera_model)
         try:
@@ -294,9 +319,22 @@ class TorchBA():
 
         # Create model
         if use_depths:
-            model = ReprojectionModelWithDepth(image_extrs, camera_intrs, points_3d, cost_fn, depth_weight=BUNDLE_ADJUSTER_OPTIONS['depth_weight'])
+            model = ReprojectionModelWithDepth(
+                image_extrs,
+                camera_intrs,
+                points_3d,
+                cost_fn,
+                depth_weight=BUNDLE_ADJUSTER_OPTIONS['depth_weight'],
+                optimize_intrinsics=optimize_intrinsics,
+            )
         else:
-            model = ReprojectionModel(image_extrs, camera_intrs, points_3d, cost_fn)
+            model = ReprojectionModel(
+                image_extrs,
+                camera_intrs,
+                points_3d,
+                cost_fn,
+                optimize_intrinsics=optimize_intrinsics,
+            )
         
         # Create optimizer
         strategy = pp.optim.strategy.TrustRegion(radius=1e4, max=1e10, up=2.0, down=0.5**4)
@@ -326,7 +364,16 @@ class TorchBA():
             "bundle_adjustment"
         )
 
-    def SolveMulti(self, cameras, images, tracks, BUNDLE_ADJUSTER_OPTIONS, use_depths=False, use_fixed_rel_poses=False):
+    def SolveMulti(
+        self,
+        cameras,
+        images,
+        tracks,
+        BUNDLE_ADJUSTER_OPTIONS,
+        use_depths=False,
+        use_fixed_rel_poses=False,
+        optimize_intrinsics=True,
+    ):
         self.camera_model = cameras[0].model_id
         self.camera_model_info = get_camera_model_info(self.camera_model)
         try:
@@ -378,15 +425,43 @@ class TorchBA():
         if use_fixed_rel_poses:
             # Use FixedRel models when rel_poses are fixed (passed via forward)
             if use_depths:
-                model = ReprojectionMultiRigModelWithDepthFixedRel(camera_intrs, points_3d, ref_poses, cost_fn, depth_weight=BUNDLE_ADJUSTER_OPTIONS['depth_weight'])
+                model = ReprojectionMultiRigModelWithDepthFixedRel(
+                    camera_intrs,
+                    points_3d,
+                    ref_poses,
+                    cost_fn,
+                    depth_weight=BUNDLE_ADJUSTER_OPTIONS['depth_weight'],
+                    optimize_intrinsics=optimize_intrinsics,
+                )
             else:
-                model = ReprojectionMultiRigModelFixedRel(camera_intrs, points_3d, ref_poses, cost_fn)
+                model = ReprojectionMultiRigModelFixedRel(
+                    camera_intrs,
+                    points_3d,
+                    ref_poses,
+                    cost_fn,
+                    optimize_intrinsics=optimize_intrinsics,
+                )
         else:
             # Use regular models when rel_poses are optimized (nn.Parameter)
             if use_depths:
-                model = ReprojectionMultiRigModelWithDepth(camera_intrs, points_3d, ref_poses, rel_poses, cost_fn, depth_weight=BUNDLE_ADJUSTER_OPTIONS['depth_weight'])
+                model = ReprojectionMultiRigModelWithDepth(
+                    camera_intrs,
+                    points_3d,
+                    ref_poses,
+                    rel_poses,
+                    cost_fn,
+                    depth_weight=BUNDLE_ADJUSTER_OPTIONS['depth_weight'],
+                    optimize_intrinsics=optimize_intrinsics,
+                )
             else:
-                model = ReprojectionMultiRigModel(camera_intrs, points_3d, ref_poses, rel_poses, cost_fn)
+                model = ReprojectionMultiRigModel(
+                    camera_intrs,
+                    points_3d,
+                    ref_poses,
+                    rel_poses,
+                    cost_fn,
+                    optimize_intrinsics=optimize_intrinsics,
+                )
         
         # Create optimizer
         strategy = pp.optim.strategy.TrustRegion(radius=1e4, max=1e10, up=2.0, down=0.5**4)

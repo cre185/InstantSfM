@@ -192,3 +192,5 @@ database.db
 image_sets/*
 scannetpp_colmap/*
 tankstemple/*
+datasets/*
+db/*
