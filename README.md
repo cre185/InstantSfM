@@ -111,7 +111,7 @@ fatal error: cudss.h: No such file or directory
       |          ^~~~~~~~~
 compilation terminated
 ```
-then you need to download and install cuDSS package from [here](https://developer.nvidia.com/cudss-downloads?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=20.04&target_type=deb_local).  
+then you need to download and install cuDSS package using [instructions](https://github.com/sair-lab/bae#setup-instructions) and package [source](https://developer.nvidia.com/cudss-downloads?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=20.04&target_type=deb_local).  
 The cuDSS should match the version of CUDA toolchain. For example, cuDSS 0.7 should be used with CUDA 13. 
 
 If opencv-python fail to load xcb, you can install opencv-python-headless
