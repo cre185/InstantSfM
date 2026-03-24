@@ -145,9 +145,8 @@ def SolveGlobalMapper(view_graph:ViewGraph, cameras, images, config:Config, visu
         
     optimize_intrinsics = config.BUNDLE_ADJUSTER_OPTIONS.get('optimize_intrinsics', True)
     for iter in range(3):
-        ba_engine.Solve(cameras, images, tracks, config.BUNDLE_ADJUSTER_OPTIONS, use_depths=config.RUNTIME_OPTIONS['use_depths'], 
-                        is_multi=ba_use_rig, use_fixed_rel_poses=config.RUNTIME_OPTIONS['use_fixed_rel_poses'],
-                        optimize_intrinsics=optimize_intrinsics)
+        ba_engine.Solve(cameras, images, tracks, config.BUNDLE_ADJUSTER_OPTIONS, use_depths=config.RUNTIME_OPTIONS['use_depths'],
+                        is_multi=ba_use_rig, use_fixed_rel_poses=config.RUNTIME_OPTIONS['use_fixed_rel_poses'], optimize_intrinsics=optimize_intrinsics)
         UndistortImages(cameras, images)
         FilterTracksByReprojectionNormalized(cameras, images, tracks, config.INLIER_THRESHOLD_OPTIONS['max_reprojection_error'] * max(1, 3 - iter))
     
@@ -176,14 +175,8 @@ def SolveGlobalMapper(view_graph:ViewGraph, cameras, images, config:Config, visu
         print('Running bundle adjustment ...')
         print('-------------------------------------')
         ba_engine = TorchBA()
-        ba_engine.Solve(
-            cameras,
-            images,
-            tracks,
-            config.BUNDLE_ADJUSTER_OPTIONS,
-            use_depths=config.RUNTIME_OPTIONS['use_depths'],
-            optimize_intrinsics=optimize_intrinsics,
-        )
+        ba_engine.Solve(cameras, images, tracks, config.BUNDLE_ADJUSTER_OPTIONS,
+                        use_depths=config.RUNTIME_OPTIONS['use_depths'], optimize_intrinsics=optimize_intrinsics)
 
         # NormalizeReconstruction(images, tracks)
         UndistortImages(cameras, images)
