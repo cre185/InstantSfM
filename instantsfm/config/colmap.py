@@ -53,6 +53,8 @@ CONFIG = {
         'thres_loss_function': 1e-1,
         'max_num_iterations': 100,
         'function_tolerance': 5e-4,
+        'num_restarts_calibrated': 1,
+        'num_restarts_uncalibrated': 2,
     },
     'BUNDLE_ADJUSTER_OPTIONS': {
         'optimize_poses': True,
@@ -68,6 +70,7 @@ CONFIG = {
         'min_num_view_per_track': 2,
         'complete_max_reproj_error': 3.0,
         'merge_max_reproj_error': 3.0,
+        're_max_angle_error': 3.0,
         'filter_max_reproj_error': 3.0,
         'filter_min_tri_angle': 1.5,
         'ba_global_max_refinements': 5,

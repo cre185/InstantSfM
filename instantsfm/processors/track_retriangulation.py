@@ -2,17 +2,20 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 import cv2
 
-from instantsfm.processors.image_undistortion import UndistortImages
 from instantsfm.processors.track_filter import FilterTracksByReprojection, FilterTracksTriangulationAngle
 from instantsfm.processors.bundle_adjustment import TorchBA
 from instantsfm.utils.union_find import UnionFind
-from instantsfm.scene.defs import CameraModelId, get_camera_model_info
+from instantsfm.scene.defs import get_camera_model_info
 from instantsfm.utils.cost_function import reproject_funcs_no_depth
 
 import torch
 from bae.utils.ba import rotate_quat
 
 EPSILON = 1e-7
+
+
+def _obs_tuple(obs):
+    return (int(obs[0]), int(obs[1]))
 
 
 def _make_observation_to_track_map(tracks):
@@ -53,15 +56,47 @@ def _point_reprojection_is_valid(cameras, images, xyz, image_id, feature_id, rep
     return sq_reprojection_error <= reproj_threshold ** 2
 
 
-def _track_supports_observation(cameras, images, xyz, track_obs, obs, reproj_threshold):
+def _point_angular_reprojection_is_valid(images, xyz, image_id, feature_id, max_angle_deg):
+    world2cam = images.world2cams[image_id]
+    pt_calc = world2cam[:3, :3] @ xyz + world2cam[:3, 3]
+    if pt_calc[2] < EPSILON:
+        return False
+
+    observed_ray = images.features_undist[image_id][feature_id]
+    observed_ray = observed_ray / max(np.linalg.norm(observed_ray), EPSILON)
+    predicted_ray = pt_calc / max(np.linalg.norm(pt_calc), EPSILON)
+    cos_angle = float(np.clip(np.dot(observed_ray, predicted_ray), -1.0, 1.0))
+    angle_deg = np.rad2deg(np.arccos(cos_angle))
+    return angle_deg <= max_angle_deg
+
+
+def _track_supports_observation(
+    cameras,
+    images,
+    xyz,
+    track_obs,
+    obs,
+    reproj_threshold,
+    max_angle_deg=None,
+):
     image_id = int(obs[0])
     if image_id in track_obs[:, 0]:
+        return False
+
+    if max_angle_deg is not None and not _point_angular_reprojection_is_valid(
+        images, xyz, image_id, int(obs[1]), max_angle_deg
+    ):
         return False
 
     all_obs = np.vstack([track_obs, np.asarray(obs, dtype=np.int32).reshape(1, 2)])
     for obs_image_id, obs_feature_id in all_obs:
         if not _point_reprojection_is_valid(
-            cameras, images, xyz, int(obs_image_id), int(obs_feature_id), reproj_threshold
+            cameras,
+            images,
+            xyz,
+            int(obs_image_id),
+            int(obs_feature_id),
+            reproj_threshold,
         ):
             return False
     return True
@@ -88,8 +123,30 @@ def _get_pair_matches(pair):
     return pair.matches
 
 
+def _build_correspondence_lookup(view_graph):
+    correspondence_lookup = {}
+    for pair in view_graph.image_pairs.values():
+        if not pair.is_valid:
+            continue
+
+        pair_matches = _get_pair_matches(pair)
+        if pair_matches.shape[0] == 0:
+            continue
+
+        image_id1 = int(pair.image_id1)
+        image_id2 = int(pair.image_id2)
+        for feat_id1, feat_id2 in pair_matches:
+            obs1 = (image_id1, int(feat_id1))
+            obs2 = (image_id2, int(feat_id2))
+            correspondence_lookup.setdefault(obs1, []).append(obs2)
+            correspondence_lookup.setdefault(obs2, []).append(obs1)
+
+    return correspondence_lookup
+
+
 def retriangulate_underreconstructed_pairs(view_graph, cameras, images, tracks, TRIANGULATOR_OPTIONS, pair_retry_counts):
     reproj_threshold = TRIANGULATOR_OPTIONS['complete_max_reproj_error']
+    re_max_angle_error = TRIANGULATOR_OPTIONS.get('re_max_angle_error', 3.0)
     re_min_ratio = TRIANGULATOR_OPTIONS.get('re_min_ratio', 0.2)
     re_max_trials = TRIANGULATOR_OPTIONS.get('re_max_trials', 1)
     min_tri_angle = TRIANGULATOR_OPTIONS.get('filter_min_tri_angle', 1.5)
@@ -135,7 +192,13 @@ def retriangulate_underreconstructed_pairs(view_graph, cameras, images, tracks, 
 
             if track_idx1 is not None:
                 if _track_supports_observation(
-                    cameras, images, tracks.xyzs[track_idx1], tracks.observations[track_idx1], obs2, reproj_threshold
+                    cameras,
+                    images,
+                    tracks.xyzs[track_idx1],
+                    tracks.observations[track_idx1],
+                    obs2,
+                    reproj_threshold,
+                    max_angle_deg=re_max_angle_error,
                 ):
                     tracks.observations[track_idx1] = np.vstack(
                         [tracks.observations[track_idx1], np.asarray(obs2, dtype=np.int32).reshape(1, 2)]
@@ -146,7 +209,13 @@ def retriangulate_underreconstructed_pairs(view_graph, cameras, images, tracks, 
 
             if track_idx2 is not None:
                 if _track_supports_observation(
-                    cameras, images, tracks.xyzs[track_idx2], tracks.observations[track_idx2], obs1, reproj_threshold
+                    cameras,
+                    images,
+                    tracks.xyzs[track_idx2],
+                    tracks.observations[track_idx2],
+                    obs1,
+                    reproj_threshold,
+                    max_angle_deg=re_max_angle_error,
                 ):
                     tracks.observations[track_idx2] = np.vstack(
                         [tracks.observations[track_idx2], np.asarray(obs1, dtype=np.int32).reshape(1, 2)]
@@ -215,14 +284,33 @@ def complete_tracks(cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS):
     candidate_obs_info          = []  # shape: [B, 2] (image_id, feature_id) corresponding to observed_feature
 
     track_id2idx = {int(track_id): idx for idx, track_id in enumerate(tracks.ids)}
+    obs_to_track = _make_observation_to_track_map(tracks)
 
     for track_id, track_obs in tracks_orig.items():
-        if track_id not in track_id2idx:
+        track_idx = track_id2idx.get(int(track_id))
+        if track_idx is None:
             continue
 
-        candidate_observed_features.extend([images[img_id].features[feat_id] for img_id, feat_id in track_obs])
-        candidate_track_indices.extend([track_id2idx[track_id] for _ in range(len(track_obs))])
-        candidate_obs_info.extend(track_obs)
+        current_obs = tracks.observations[track_idx]
+        current_obs_set = {_obs_tuple(obs) for obs in current_obs}
+        current_image_ids = set(current_obs[:, 0].astype(int).tolist()) if current_obs.size > 0 else set()
+
+        for image_id, feature_id in track_obs:
+            obs = (int(image_id), int(feature_id))
+            if obs in current_obs_set:
+                continue
+            if not images.is_registered[obs[0]]:
+                continue
+
+            owner_track_idx = obs_to_track.get(obs)
+            if owner_track_idx is not None and owner_track_idx != track_idx:
+                continue
+            if obs[0] in current_image_ids:
+                continue
+
+            candidate_observed_features.append(images.features[obs[0]][obs[1]])
+            candidate_track_indices.append(track_idx)
+            candidate_obs_info.append(obs)
 
     if not candidate_observed_features:
         return 0
@@ -290,10 +378,12 @@ def complete_tracks(cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS):
         merged_obs = np.unique(merged_obs, axis=0)
         num_completed += max(0, merged_obs.shape[0] - old_num_obs)
         tracks.observations[track_idx] = merged_obs
+        for obs in new_obs:
+            obs_to_track[_obs_tuple(obs)] = track_idx
 
     return num_completed
 
-def merge_tracks(cameras, images, tracks, TRIANGULATOR_OPTIONS):
+def merge_tracks(view_graph, cameras, images, tracks, TRIANGULATOR_OPTIONS):
     """
     Attempts to merge 3D point tracks if their merged 3D point produces
     acceptable reprojection errors in all observations. 
@@ -313,78 +403,93 @@ def merge_tracks(cameras, images, tracks, TRIANGULATOR_OPTIONS):
     Returns:
         Total number of merged observations.
     """
+    if len(tracks) <= 1:
+        return 0
+
     max_squared_reproj_error = TRIANGULATOR_OPTIONS['merge_max_reproj_error'] ** 2
-
-    # Batch extract xyz positions
-    xyz_points = tracks.xyzs
-    track_idx2id = {idx: idx for idx in range(len(tracks))}
-
-    k = min(3, len(tracks))
-    index = faiss.IndexFlatL2(3)
-    index.add(xyz_points)
-    distances, indices = index.search(xyz_points, k)
-
-    candidate_pairs = []
-    
-    for i in range(len(tracks)):
-        for j in range(1, len(indices[i])): # skip the first one, which is the track itself
-            source_idx = i
-            target_idx = indices[i][j]
-            candidate_pairs.append((source_idx, target_idx))
-
-    source_idx, target_idx = zip(*[(source_idx, target_idx) for source_idx, target_idx in candidate_pairs])
-    source_id, target_id = [track_idx2id[idx] for idx in source_idx], [track_idx2id[idx] for idx in target_idx]
+    correspondence_lookup = _build_correspondence_lookup(view_graph)
+    obs_to_track = _make_observation_to_track_map(tracks)
+    merge_trials = set()
 
     uf = UnionFind()
-    for track_id in range(len(tracks)):
-        uf.Find(track_id)
+    for track_idx in range(len(tracks)):
+        uf.Find(track_idx)
 
-    def try_merge_pair(track_id1, track_id2):
-        # merge track1 into track2
-        track_actual_id1, track_actual_id2 = uf.Find(track_id1), uf.Find(track_id2)
-        if track_actual_id1 == track_actual_id2:
+    def try_merge_pair(track_idx1, track_idx2):
+        track_root1 = uf.Find(track_idx1)
+        track_root2 = uf.Find(track_idx2)
+        if track_root1 == track_root2:
             return False, None
-        
-        track1_xyz = tracks.xyzs[track_actual_id1]
-        track2_xyz = tracks.xyzs[track_actual_id2]
-        track1_obs = tracks.observations[track_actual_id1]
-        track2_obs = tracks.observations[track_actual_id2]
+
+        track1_xyz = tracks.xyzs[track_root1]
+        track2_xyz = tracks.xyzs[track_root2]
+        track1_obs = tracks.observations[track_root1]
+        track2_obs = tracks.observations[track_root2]
+
+        merged_obs = np.concatenate([track1_obs, track2_obs], axis=0)
+        merged_obs = np.unique(merged_obs, axis=0)
+        if np.unique(merged_obs[:, 0]).shape[0] != merged_obs.shape[0]:
+            return False, None
 
         weight1 = track1_obs.shape[0]
         weight2 = track2_obs.shape[0]
         merged_xyz = (weight1 * track1_xyz + weight2 * track2_xyz) / (weight1 + weight2)
 
-        all_obs = np.concatenate([track1_obs, track2_obs], axis=0)
-
-        for image_id, feature_id in all_obs:
+        for image_id, feature_id in merged_obs:
             world2cam = images.world2cams[image_id]
             pt_calc = world2cam[:3, :3] @ merged_xyz + world2cam[:3, 3]
             if pt_calc[2] < EPSILON:
                 return False, None
+
             feature = images.features[image_id][feature_id]
             cam = cameras[images.cam_ids[image_id]]
             pt_reproj = cam.cam2img(pt_calc)
             sq_reprojection_error = np.sum((pt_reproj - feature) ** 2)
             if sq_reprojection_error > max_squared_reproj_error:
                 return False, None
-        return True, (merged_xyz, all_obs)
-            
-    total_merged = 0
 
-    for src, tgt in zip(source_id, target_id):
-        merged, result = try_merge_pair(src, tgt)
-        if merged:
-            uf.Union(src, tgt)
-            total_merged += len(tracks.observations[src])
-            # save new track into target track (align behavior with union find)
-            final_tgt = uf.Find(tgt)
-            tracks.xyzs[final_tgt] = result[0]
-            tracks.observations[final_tgt] = result[1]
+        return True, (merged_xyz, merged_obs.astype(np.int32))
+
+    def merge_track(track_idx):
+        track_root = uf.Find(track_idx)
+        for obs in tracks.observations[track_root]:
+            for corr_obs in correspondence_lookup.get(_obs_tuple(obs), ()):
+                other_track_idx = obs_to_track.get(corr_obs)
+                if other_track_idx is None:
+                    continue
+
+                track_root = uf.Find(track_root)
+                other_root = uf.Find(other_track_idx)
+                if track_root == other_root:
+                    continue
+
+                pair_key = (min(track_root, other_root), max(track_root, other_root))
+                if pair_key in merge_trials:
+                    continue
+                merge_trials.add(pair_key)
+
+                merged, result = try_merge_pair(track_root, other_root)
+                if not merged:
+                    continue
+
+                uf.Union(track_root, other_root)
+                final_root = uf.Find(other_root)
+                tracks.xyzs[final_root] = result[0]
+                tracks.observations[final_root] = result[1]
+                for merged_obs in result[1]:
+                    obs_to_track[_obs_tuple(merged_obs)] = final_root
+                return result[1].shape[0] + merge_track(final_root)
+
+        return 0
+
+    total_merged = 0
+    for track_idx in range(len(tracks)):
+        if uf.Find(track_idx) != track_idx:
+            continue
+        total_merged += merge_track(track_idx)
 
     # Mark deleted tracks and filter in-place
     valid_mask = np.array([uf.Find(track_id) == track_id for track_id in range(len(tracks))], dtype=bool)
-    valid_indices = np.where(valid_mask)[0]
-    
     # Filter tracks in-place to maintain reference semantics
     tracks.filter_by_mask(valid_mask)
 
@@ -398,13 +503,13 @@ def filter_points(cameras, images, tracks, TRIANGULATOR_OPTIONS, use_triangulati
     num_observations_after = count_observations(tracks)
     return num_observations_before - num_observations_after
 
-def complete_and_merge_tracks(cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS):
+def complete_and_merge_tracks(view_graph, cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS):
     num_completed_observations = complete_tracks(cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS)
     print('Number of completed observations:', num_completed_observations)
     num_merged_observations = 0
-    # TODO: Implement a better merge later, current version of merge does not have a good result and is not used in the pipeline
-    # num_merged_observations = merge_tracks(cameras, images, tracks, TRIANGULATOR_OPTIONS)
-    # print('Number of merged observations:', num_merged_observations)
+    if TRIANGULATOR_OPTIONS.get('enable_merge', False):
+        num_merged_observations = merge_tracks(view_graph, cameras, images, tracks, TRIANGULATOR_OPTIONS)
+        print('Number of merged observations:', num_merged_observations)
     return num_completed_observations + num_merged_observations
 
 def RetriangulateTracks(view_graph, cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS, BUNDLE_ADJUSTER_OPTIONS):
@@ -412,7 +517,7 @@ def RetriangulateTracks(view_graph, cameras, images, tracks, tracks_orig, TRIANG
     image_registered = images.is_registered.copy()
     pair_retry_counts = {}
 
-    complete_and_merge_tracks(cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS)
+    complete_and_merge_tracks(view_graph, cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS)
     num_retriangulated_observations = retriangulate_underreconstructed_pairs(
         view_graph, cameras, images, tracks, TRIANGULATOR_OPTIONS, pair_retry_counts
     )
@@ -423,8 +528,11 @@ def RetriangulateTracks(view_graph, cameras, images, tracks, tracks_orig, TRIANG
         num_observations_before = count_observations(tracks)
         ba_engine = TorchBA()
         ba_engine.Solve(cameras, images, tracks, BUNDLE_ADJUSTER_OPTIONS)
+        images.is_registered[:] = image_registered
         num_changed_observations = 0
-        num_changed_observations += abs(complete_and_merge_tracks(cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS))
+        num_changed_observations += abs(
+            complete_and_merge_tracks(view_graph, cameras, images, tracks, tracks_orig, TRIANGULATOR_OPTIONS)
+        )
         num_changed_observations += retriangulate_underreconstructed_pairs(
             view_graph, cameras, images, tracks, TRIANGULATOR_OPTIONS, pair_retry_counts
         )

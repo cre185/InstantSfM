@@ -218,6 +218,9 @@ def _run_optimization(optimizer, input_dict, max_iterations, function_tolerance,
     
     progress_bar.close()
     update_fn(*update_args)
+    if not loss_history:
+        return float("inf")
+    return float(loss_history[-1])
 
 
 class TorchGP():
@@ -266,36 +269,79 @@ class TorchGP():
                 t = images.world2cams[image_id, :3, 3]
                 images.world2cams[image_id, :3, 3] = -(R @ t)
 
-        # Prepare all data
-        (image_translations, points_3d, scales, scale_indices, 
-         translations, image_indices, point_indices, is_calibrated, image_idx2id) = _prepare_single_camera_data(
-            cameras, images, tracks, self.device, 
-            GLOBAL_POSITIONER_OPTIONS['min_num_view_per_track'], use_depths
+        base_world2cams = images.world2cams.copy()
+        base_registered = images.is_registered.copy()
+        base_track_xyzs = tracks.xyzs.copy()
+        base_track_initialized = tracks.is_initialized.copy()
+
+        registered_indices = np.where(base_registered)[0]
+        has_uncalibrated_image = any(
+            not cameras[images.cam_ids[image_id]].has_prior_focal_length
+            for image_id in registered_indices
         )
+        if has_uncalibrated_image:
+            num_restarts = GLOBAL_POSITIONER_OPTIONS.get("num_restarts_uncalibrated", 2)
+        else:
+            num_restarts = GLOBAL_POSITIONER_OPTIONS.get("num_restarts_calibrated", 1)
+        num_restarts = max(1, int(num_restarts))
 
-        # Create model and optimizer
-        model = PairwiseSingleCameraModel(image_translations, points_3d, scales, cost_fn, scale_indices=scale_indices)
-        strategy = pp.optim.strategy.TrustRegion(radius=1e3, max=1e8, up=2.0, down=0.5**4)
-        sparse_solver = PCG(tol=1e-5)
-        huber_kernel = Huber(GLOBAL_POSITIONER_OPTIONS['thres_loss_function'])
-        optimizer = LM(model, strategy=strategy, solver=sparse_solver, kernel=huber_kernel, reject=30)
+        best_loss = float("inf")
+        best_world2cams = None
+        best_registered = None
+        best_track_xyzs = None
+        best_track_initialized = None
 
-        input = {
-            "translations": translations,
-            "image_indices": image_indices,
-            "point_indices": point_indices,
-            "is_calibrated": is_calibrated,
-        }
+        for restart_idx in range(num_restarts):
+            images.world2cams[:] = base_world2cams
+            images.is_registered[:] = base_registered
+            tracks.xyzs[:] = base_track_xyzs
+            tracks.is_initialized[:] = base_track_initialized
+            if restart_idx > 0:
+                print(f"Running global positioning restart {restart_idx + 1} / {num_restarts}")
+                self.InitializeRandomPositions(cameras, images, tracks)
 
-        # Run optimization
-        _run_optimization(
-            optimizer, input, 
-            GLOBAL_POSITIONER_OPTIONS['max_num_iterations'],
-            GLOBAL_POSITIONER_OPTIONS['function_tolerance'],
-            self.visualizer, update,
-            (cameras, images, tracks, points_3d, image_idx2id, image_translations),
-            "global_positioning"
-        )
+            # Prepare all data
+            (image_translations, points_3d, scales, scale_indices,
+             translations, image_indices, point_indices, is_calibrated, image_idx2id) = _prepare_single_camera_data(
+                cameras, images, tracks, self.device,
+                GLOBAL_POSITIONER_OPTIONS['min_num_view_per_track'], use_depths
+            )
+
+            # Create model and optimizer
+            model = PairwiseSingleCameraModel(image_translations, points_3d, scales, cost_fn, scale_indices=scale_indices)
+            strategy = pp.optim.strategy.TrustRegion(radius=1e3, max=1e8, up=2.0, down=0.5**4)
+            sparse_solver = PCG(tol=1e-5)
+            huber_kernel = Huber(GLOBAL_POSITIONER_OPTIONS['thres_loss_function'])
+            optimizer = LM(model, strategy=strategy, solver=sparse_solver, kernel=huber_kernel, reject=30)
+
+            input = {
+                "translations": translations,
+                "image_indices": image_indices,
+                "point_indices": point_indices,
+                "is_calibrated": is_calibrated,
+            }
+
+            final_loss = _run_optimization(
+                optimizer, input,
+                GLOBAL_POSITIONER_OPTIONS['max_num_iterations'],
+                GLOBAL_POSITIONER_OPTIONS['function_tolerance'],
+                self.visualizer, update,
+                (cameras, images, tracks, points_3d, image_idx2id, image_translations),
+                "global_positioning"
+            )
+            print(f"Global positioning restart {restart_idx + 1} final loss: {final_loss:.6f}")
+            if final_loss < best_loss:
+                best_loss = final_loss
+                best_world2cams = images.world2cams.copy()
+                best_registered = images.is_registered.copy()
+                best_track_xyzs = tracks.xyzs.copy()
+                best_track_initialized = tracks.is_initialized.copy()
+
+        if best_world2cams is not None:
+            images.world2cams[:] = best_world2cams
+            images.is_registered[:] = best_registered
+            tracks.xyzs[:] = best_track_xyzs
+            tracks.is_initialized[:] = best_track_initialized
 
     def OptimizeMulti(self, cameras, images, tracks, GLOBAL_POSITIONER_OPTIONS, use_depths=False, use_fixed_rel_poses=False):
         cost_fn = pairwise_cost

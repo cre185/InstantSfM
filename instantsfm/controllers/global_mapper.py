@@ -144,9 +144,11 @@ def SolveGlobalMapper(view_graph:ViewGraph, cameras, images, config:Config, visu
         Single2Rig(images, cameras, tracks, config.VOTING_OPTIONS, use_fixed_rel_poses=config.RUNTIME_OPTIONS['use_fixed_rel_poses'])
         
     optimize_intrinsics = config.BUNDLE_ADJUSTER_OPTIONS.get('optimize_intrinsics', True)
+    ba_registered_images = images.is_registered.copy()
     for iter in range(3):
         ba_engine.Solve(cameras, images, tracks, config.BUNDLE_ADJUSTER_OPTIONS, use_depths=config.RUNTIME_OPTIONS['use_depths'],
                         is_multi=ba_use_rig, use_fixed_rel_poses=config.RUNTIME_OPTIONS['use_fixed_rel_poses'], optimize_intrinsics=optimize_intrinsics)
+        images.is_registered[:] = ba_registered_images
         UndistortImages(cameras, images)
         FilterTracksByReprojectionNormalized(cameras, images, tracks, config.INLIER_THRESHOLD_OPTIONS['max_reprojection_error'] * max(1, 3 - iter))
     
@@ -175,8 +177,11 @@ def SolveGlobalMapper(view_graph:ViewGraph, cameras, images, config:Config, visu
         print('Running bundle adjustment ...')
         print('-------------------------------------')
         ba_engine = TorchBA()
+        image_registered = images.is_registered.copy()
         ba_engine.Solve(cameras, images, tracks, config.BUNDLE_ADJUSTER_OPTIONS,
                         use_depths=config.RUNTIME_OPTIONS['use_depths'], optimize_intrinsics=optimize_intrinsics)
+        # Preserve already-registered poses even if BA temporarily drops images with no surviving track support.
+        images.is_registered[:] = image_registered
 
         # NormalizeReconstruction(images, tracks)
         UndistortImages(cameras, images)
